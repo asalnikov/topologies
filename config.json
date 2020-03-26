@@ -1,0 +1,37 @@
+[
+{ "module":
+	{ "name": "simple",
+	  "params": [],
+	  "submodules": [],
+	  "connections": [],
+	  "gates": [
+		"gate"
+	  ]
+	}
+},
+
+{ "module":
+	{ "name": "net",
+	  "params": [],
+	  "submodules": [
+		{
+			"vector": "simplevec",
+			"module": "simple",
+			"size": 4,
+			"params": []
+		}
+	  ],
+	  "connections": [
+		{ "from": "simplevec[0].gate", "to": "simplevec[1].gate" },
+		{ "from": "simplevec[2].gate", "to": "simplevec[3].gate" }
+	  ],
+	  "gates": []
+	}
+},
+
+{ "network":
+	{ "module": "net",
+	  "params": []
+	}
+}
+]
