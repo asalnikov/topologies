@@ -1,2 +1,5 @@
 main
 *~
+parse_order.txt
+*.swp
+*.swo

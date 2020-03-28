@@ -15,7 +15,7 @@
 	  "params": [],
 	  "submodules": [
 		{
-			"vector": "simplevec",
+			"name": "simplevec",
 			"module": "simple",
 			"size": 4,
 			"params": []
