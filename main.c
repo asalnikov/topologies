@@ -1,14 +1,12 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <stdarg.h>
-#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 #include <sys/stat.h>
 #include <sys/mman.h>
-#include "jsmn.h"
 
 #include "parser.h"
 #include "defs.h"
@@ -44,27 +42,6 @@ read_file (int argc, char *argv[], char **addr)
 	close(fd);
 	return st.st_size;
 }
-
-bool
-json_str_eq (const char *json, jsmntok_t *tok, const char *s)
-{
-	if (tok->type == JSMN_STRING &&
-	    (int) strlen(s) == tok->end - tok->start &&
-	    strncmp(json + tok->start, s, tok->end - tok->start) == 0)
-	{
-		return true;
-	}
-	return false;
-}
-
-void
-json_str_cpy (const char *json, jsmntok_t *tok, char **t)
-{
-	int s_len = tok->end - tok->start;
-	*t = calloc(s_len + 1, 1);
-	strncpy(*t, json + tok->start, s_len);
-}
-
 
 
 graph_t *
@@ -164,25 +141,65 @@ graph_destroy (graph_t *g)
 stack_t *
 stack_create (char *name)
 {
-
+	stack_t *s = malloc(sizeof(stack_t));
+	s->next = NULL;
+	s->name = malloc(strlen(name) + 1);
+	strncpy(s->name, name, strlen(name) + 1);
+	return s;
 }
 
 void
 stack_enter (stack_t *s, char *name, int index)
 {
-
+	int len;
+	stack_t *head = s;
+	while (head->next != NULL)
+		head = head->next;
+	head->next = malloc(sizeof(stack_t));
+	head = head->next;
+	head->next = NULL;
+	if (index < 0) {
+		len = strlen(name) + 1;
+		head->name = malloc(len);
+		strncpy(s->name, name, len);
+	} else {
+		len = snprintf(0, 0, "%s[%d]", name, index) + 1;
+		head->name = malloc(len);
+		snprintf(head->name, len, "%s[%d]", name, index);
+	}
 }
 
 void
 stack_leave (stack_t *s)
 {
-
+	stack_t *head = s;
+	if (head->next == NULL)
+		return;
+	while (head->next->next != NULL)
+		head = head->next;
+	free(head->next->name);
+	free(head->next);
+	head->next = NULL;
 }
 
 char *
 stack_name (stack_t *s)
 {
-
+	unsigned len = 0, off = 0;
+	stack_t *head = s;
+	while (head->next != NULL) {
+		len += strlen(head->name) + 1;
+		head = head->next;
+	}
+	len += strlen(head->name) + 1;
+	char *name = malloc(len);
+	while (head->next != NULL) {
+		snprintf(name + off, strlen(head->name) + 2, "%s.", head->name);
+		off += strlen(head->name) + 1;
+		head = head->next;
+	}
+	snprintf(name + off, strlen(head->name) + 2, "%s.", head->name);
+	return name;
 }
 
 module_t *
@@ -195,10 +212,10 @@ find_module (network_definition_t *net, char *name)
 }
 
 void
-expand_module(graph_t *g, module_t *module, stack_t stack)
+expand_module (graph_t *g, module_t *module, stack_t *stack)
 {
 	if (module->submodules == NULL) {
-		graph_add_node(g, name_from_stack(stack));
+		graph_add_node(g, stack_name(stack));
 		return;
 	}
 
@@ -208,8 +225,8 @@ graph_t *
 definition_to_graph (network_definition_t *net)
 {
 	module_t *root_module = find_module(net, net->network->module);
-	graph *g = graph_create();
-	stack_t stack = stack_create("network");
+	graph_t *g = graph_create();
+	stack_t *stack = stack_create("network");
 	expand_module(g, root_module, stack);
 	return g;
 }
@@ -219,22 +236,12 @@ int
 main (int argc, char *argv[])
 {
 	char *addr = NULL;
+	network_definition_t network_definition = { };
 
 	off_t file_size = read_file(argc, argv, &addr);
-
-	jsmntok_t *tokens;
-	jsmn_parser parser;
-	jsmn_init(&parser);
-	int n_tokens = jsmn_parse(&parser, addr, file_size, NULL, 0);
-	if (n_tokens < 0)
-		error("%s: invalid JSON data: %d\n", argv[1], n_tokens);
-	tokens = malloc(sizeof(jsmntok_t) * (size_t) n_tokens);
-	jsmn_init(&parser);
-	jsmn_parse(&parser, addr, file_size, tokens, n_tokens);
-	/* json_print(tokens, n_tokens, addr); */
-
-	network_definition_t network_definition = { };
-	json_deserialize(tokens, n_tokens, addr, &network_definition);
+	int res = json_read_file(addr, file_size, &network_definition);
+	if (res < 0)
+		error("%s: invalid JSON data: %d\n", argv[1], res);
 
 	graph_t *gg = definition_to_graph(&network_definition);
 	graph_print(gg, stdout);

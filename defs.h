@@ -1,5 +1,6 @@
 #ifndef DEFS_H
 # define DEFS_H
+
 typedef struct node_list node_list_t;
 
 typedef struct {

@@ -1,16 +1,11 @@
 #include <errno.h>
-#include <fcntl.h>
-#include <stdarg.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <unistd.h>
-#include <sys/stat.h>
-#include <sys/mman.h>
-#include "jsmn.h"
 
 #include "parser.h"
+#include "jsmn.h"
 #include "defs.h"
 
 typedef enum {
@@ -26,6 +21,27 @@ typedef enum {
 	STATE_NETWORK,
 	STATE_NETWORK_PARAMS
 } state_t;
+
+static bool
+json_str_eq (const char *json, jsmntok_t *tok, const char *s)
+{
+	if (tok->type == JSMN_STRING &&
+	    (int) strlen(s) == tok->end - tok->start &&
+	    strncmp(json + tok->start, s, tok->end - tok->start) == 0)
+	{
+		return true;
+	}
+	return false;
+}
+
+static void
+json_str_cpy (const char *json, jsmntok_t *tok, char **t)
+{
+	int s_len = tok->end - tok->start;
+	*t = calloc(s_len + 1, 1);
+	strncpy(*t, json + tok->start, s_len);
+}
+
 
 static char *
 state_name (state_t state)
@@ -411,4 +427,24 @@ json_print (jsmntok_t *tokens, int n_tokens, char *text)
 	}
 	fflush(stdout);
 	return;
+}
+
+int
+json_read_file (char *text, off_t file_size,
+                network_definition_t *network_definition)
+{
+
+	jsmntok_t *tokens;
+	jsmn_parser parser;
+	jsmn_init(&parser);
+	int n_tokens = jsmn_parse(&parser, text, file_size, NULL, 0);
+	if (n_tokens < 0)
+		return n_tokens;
+	tokens = malloc(sizeof(jsmntok_t) * (size_t) n_tokens);
+	jsmn_init(&parser);
+	jsmn_parse(&parser, text, file_size, tokens, n_tokens);
+	/* json_print(tokens, n_tokens, text); */
+
+	json_deserialize(tokens, n_tokens, text, network_definition);
+	return 0;
 }
