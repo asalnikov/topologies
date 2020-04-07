@@ -235,6 +235,7 @@ json_deserialize (jsmntok_t *tokens, int n_tokens, char *text,
 					          state);
 				modules[modules_i].submodules = calloc(array_n,
 								       sizeof(submodule_t));
+				modules[modules_i].n_submodules = array_n;
 				i += 1;
 				state = STATE_MODULE_SUBMODULES_BETWEEN;
 			} else if (json_str_eq(text, &tokens[i], "connections")) {
@@ -296,6 +297,7 @@ json_deserialize (jsmntok_t *tokens, int n_tokens, char *text,
 				bad_token(i, tokens[i].type, tokens[i].start,
 				          text, state);
 			modules[modules_i].connections = calloc(array_n, sizeof(char *));
+			modules[modules_i].n_connections = array_n;
 			for (array_i = 0; array_i < array_n; array_i++) {
 				i += 1;
 				if (tokens[i].type != JSMN_STRING)

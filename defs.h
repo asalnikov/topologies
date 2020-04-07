@@ -63,9 +63,11 @@ typedef struct {
 	char *name;
 	char **params;
 	submodule_t *submodules;
+	int n_submodules;
 	//gate_t *gates;
 	char **gates;
 	char **connections;
+	int n_connections;
 } module_t;
 
 typedef struct {
