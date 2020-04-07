@@ -81,7 +81,7 @@ typedef struct {
 	int cap_nodes;
 } graph_t;
 
-enum { GRAPH_BLK_SIZE = 16 };
+enum { GRAPH_BLK_SIZE = 32 };
 
 graph_t *
 graph_create ()
@@ -97,15 +97,15 @@ void
 graph_add_node (graph_t *g, char *name)
 {
 	int i = g->n_nodes;
-	g->n_nodes++;
 	if (g->n_nodes == g->cap_nodes) {
 		g->cap_nodes += GRAPH_BLK_SIZE;
-		g->nodes = realloc(g->nodes, g->cap_nodes);
+		g->nodes = realloc(g->nodes, g->cap_nodes * sizeof(node_t));
 	}
 	g->nodes[i].name = malloc(strlen(name) + 1);
 	strncpy(g->nodes[i].name, name, strlen(name) + 1);
 	g->nodes[i].adj = NULL;
 	g->nodes[i].n = i;
+	g->n_nodes++;
 }
 
 node_t *
@@ -135,23 +135,6 @@ graph_add_edge (graph_t *g, char *name_a, char *name_b)
 }
 
 void
-graph_destroy (graph_t *g)
-{
-	node_list_t *l, *l_next;
-	for (int i = 0; i < g->n_nodes; i++) {
-		free(g->nodes[i].name);
-		l = g->nodes[i].adj;
-		while (l != NULL) {
-			l_next = l->next;
-			free(l);
-			l = l_next;
-		}
-	}
-	free(g->nodes);
-	free(g);
-}
-
-void
 graph_print (graph_t *g, FILE *stream)
 {
 	node_list_t *l, *l_next;
@@ -170,6 +153,23 @@ graph_print (graph_t *g, FILE *stream)
 		}
 	}
 	fprintf(stream, "}\n");
+}
+
+void
+graph_destroy (graph_t *g)
+{
+	node_list_t *l, *l_next;
+	for (int i = 0; i < g->n_nodes; i++) {
+		free(g->nodes[i].name);
+		l = g->nodes[i].adj;
+		while (l != NULL) {
+			l_next = l->next;
+			free(l);
+			l = l_next;
+		}
+	}
+	free(g->nodes);
+	free(g);
 }
 
 typedef enum {
