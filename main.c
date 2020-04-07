@@ -43,7 +43,7 @@ read_file (int argc, char *argv[], char **addr)
 }
 
 bool
-json_str_eq(const char *json, jsmntok_t *tok, const char *s)
+json_str_eq (const char *json, jsmntok_t *tok, const char *s)
 {
 	if (tok->type == JSMN_STRING &&
 	    (int) strlen(s) == tok->end - tok->start &&
@@ -55,11 +55,121 @@ json_str_eq(const char *json, jsmntok_t *tok, const char *s)
 }
 
 void
-json_str_cpy(const char *json, jsmntok_t *tok, char **t)
+json_str_cpy (const char *json, jsmntok_t *tok, char **t)
 {
 	int s_len = tok->end - tok->start;
 	*t = calloc(s_len + 1, 1);
 	strncpy(*t, json + tok->start, s_len);
+}
+
+typedef struct node_list node_list_t;
+
+typedef struct {
+	char *name;
+	node_list_t *adj;
+	int n;
+} node_t;
+
+struct node_list {
+	node_t *node;
+	node_list_t *next;
+};
+
+typedef struct {
+	node_t *nodes;
+	int n_nodes;
+	int cap_nodes;
+} graph_t;
+
+enum { GRAPH_BLK_SIZE = 16 };
+
+graph_t *
+graph_create ()
+{
+	graph_t *g = malloc(sizeof(graph_t));
+	g->n_nodes = 0;
+	g->cap_nodes = GRAPH_BLK_SIZE;
+	g->nodes = calloc(g->cap_nodes, sizeof(node_t));
+	return g;
+}
+
+void
+graph_add_node (graph_t *g, char *name)
+{
+	int i = g->n_nodes;
+	g->n_nodes++;
+	if (g->n_nodes == g->cap_nodes) {
+		g->cap_nodes += GRAPH_BLK_SIZE;
+		g->nodes = realloc(g->nodes, g->cap_nodes);
+	}
+	g->nodes[i].name = malloc(strlen(name) + 1);
+	strncpy(g->nodes[i].name, name, strlen(name) + 1);
+	g->nodes[i].adj = NULL;
+	g->nodes[i].n = i;
+}
+
+node_t *
+graph_find_node (graph_t *g, char *name)
+{
+	for (int i = 0; i < g->n_nodes; i++) {
+		if (strcmp(g->nodes[i].name, name) == 0)
+			return &(g->nodes[i]);
+	}
+	return NULL;
+}
+
+void
+graph_add_edge (graph_t *g, char *name_a, char *name_b)
+{
+	node_t *node_a, *node_b;
+	node_a = graph_find_node(g, name_a);
+	node_b = graph_find_node(g, name_b);
+	node_list_t *l = malloc(sizeof(node_list_t));
+	l->next = node_a->adj;
+	l->node = node_b;
+	node_a->adj = l;
+	l = malloc(sizeof(node_list_t));
+	l->next = node_b->adj;
+	l->node = node_a;
+	node_b->adj = l;
+}
+
+void
+graph_destroy (graph_t *g)
+{
+	node_list_t *l, *l_next;
+	for (int i = 0; i < g->n_nodes; i++) {
+		free(g->nodes[i].name);
+		l = g->nodes[i].adj;
+		while (l != NULL) {
+			l_next = l->next;
+			free(l);
+			l = l_next;
+		}
+	}
+	free(g->nodes);
+	free(g);
+}
+
+void
+graph_print (graph_t *g, FILE *stream)
+{
+	node_list_t *l, *l_next;
+	fprintf(stream, "graph g {\n");
+	for (int i = 0; i < g->n_nodes; i++) {
+		fprintf(stream, "n%d [label=\"%s\"];\n", i, g->nodes[i].name);
+	}
+	for (int i = 0; i < g->n_nodes; i++) {
+		l = g->nodes[i].adj;
+		while (l != NULL) {
+			l_next = l->next;
+				if (i < l->node->n)
+					fprintf(stream, "n%d -- n%d;\n",
+					        i, l->node->n);
+			l = l_next;
+		}
+	}
+	fprintf(stream, "}\n");
 }
 
 typedef enum {
@@ -233,7 +343,6 @@ json_deserialize (jsmntok_t *tokens, int n_tokens, char *text,
 
 	do {
 		if (state == STATE_START) {
-			fprintf(stderr, "state %s token %d\n", state_name(state), i);
 			if (tokens[i].type != JSMN_ARRAY)
 				bad_token(i, tokens[i].type, tokens[i].start, text, state);
 			modules_n = tokens[i].size;
@@ -246,7 +355,6 @@ json_deserialize (jsmntok_t *tokens, int n_tokens, char *text,
 			state = STATE_BETWEEN;
 
 		} else if (state == STATE_BETWEEN) {
-			fprintf(stderr, "state %s token %d\n", state_name(state), i);
 			if (tokens[i].type != JSMN_OBJECT ||
 			    tokens[i].size != 1)
 			{
@@ -275,7 +383,6 @@ json_deserialize (jsmntok_t *tokens, int n_tokens, char *text,
 			}
 
 		} else if (state == STATE_MODULE) {
-			fprintf(stderr, "state %s token %d\n", state_name(state), i);
 			if (object_i == object_n) {
 				state = STATE_BETWEEN;
 			} else if (json_str_eq(text, &tokens[i], "name")) {
@@ -320,7 +427,6 @@ json_deserialize (jsmntok_t *tokens, int n_tokens, char *text,
 				bad_token(i, tokens[i].type, tokens[i].start, text, state);
 			}
 		} else if (state == STATE_MODULE_PARAMS) {
-			fprintf(stderr, "state %s token %d\n", state_name(state), i);
 			array_n = tokens[i].size;
 			if (modules[modules_i].params != NULL)
 				bad_token(i, tokens[i].type, tokens[i].start, text, state);
@@ -335,7 +441,6 @@ json_deserialize (jsmntok_t *tokens, int n_tokens, char *text,
 			i += 1;
 			state = STATE_MODULE;
 		} else if (state == STATE_MODULE_GATES) {
-			fprintf(stderr, "state %s token %d\n", state_name(state), i);
 			array_n = tokens[i].size;
 			if (modules[modules_i].gates != NULL)
 				bad_token(i, tokens[i].type, tokens[i].start, text, state);
@@ -350,7 +455,6 @@ json_deserialize (jsmntok_t *tokens, int n_tokens, char *text,
 			i += 1;
 			state = STATE_MODULE;
 		} else if (state == STATE_MODULE_CONNECTIONS) {
-			fprintf(stderr, "state %s token %d\n", state_name(state), i);
 			array_n = tokens[i].size;
 			if (modules[modules_i].connections != NULL)
 				bad_token(i, tokens[i].type, tokens[i].start, text, state);
@@ -365,7 +469,6 @@ json_deserialize (jsmntok_t *tokens, int n_tokens, char *text,
 			i += 1;
 			state = STATE_MODULE;
 		} else if (state == STATE_MODULE_SUBMODULES_BETWEEN) {
-			fprintf(stderr, "state %s token %d\n", state_name(state), i);
 			if (array_i == array_n) {
 				state = STATE_MODULE;
 			} else if (tokens[i].type != JSMN_OBJECT) {
@@ -377,7 +480,6 @@ json_deserialize (jsmntok_t *tokens, int n_tokens, char *text,
 				i += 1;
 			}
 		} else if (state == STATE_MODULE_SUBMODULE) {
-			fprintf(stderr, "state %s token %d\n", state_name(state), i);
 			if (subobject_i == subobject_n) {
 				state = STATE_MODULE_SUBMODULES_BETWEEN;
 				array_i += 1;
@@ -410,7 +512,6 @@ json_deserialize (jsmntok_t *tokens, int n_tokens, char *text,
 				state = STATE_MODULE_SUBMODULE_PARAMS;
 			}
 		} else if (state == STATE_MODULE_SUBMODULE_PARAMS) {
-			fprintf(stderr, "state %s token %d\n", state_name(state), i);
 			subarray_n = tokens[i].size;
 			if (modules[modules_i].submodules[array_i].params != NULL)
 				bad_token(i, tokens[i].type, tokens[i].start, text, state);
@@ -426,7 +527,6 @@ json_deserialize (jsmntok_t *tokens, int n_tokens, char *text,
 			i += 1;
 			state = STATE_MODULE_SUBMODULE;
 		} else if (state == STATE_NETWORK) {
-			fprintf(stderr, "state %s token %d\n", state_name(state), i);
 			if (object_i == object_n) {
 				state = STATE_BETWEEN;
 			} else if (json_str_eq(text, &tokens[i], "module")) {
@@ -444,7 +544,6 @@ json_deserialize (jsmntok_t *tokens, int n_tokens, char *text,
 				state = STATE_NETWORK_PARAMS;
 			}
 		} else if (state == STATE_NETWORK_PARAMS) {
-			fprintf(stderr, "state %s token %d\n", state_name(state), i);
 			array_n = tokens[i].size;
 			if (network->params != NULL)
 				bad_token(i, tokens[i].type, tokens[i].start, text, state);
@@ -498,11 +597,24 @@ main (int argc, char *argv[])
 	jsmn_init(&parser);
 	jsmn_parse(&parser, addr, file_size, tokens, n_tokens);
 
-	json_print(tokens, n_tokens, addr);
+	//json_print(tokens, n_tokens, addr);
 	network_t *network = NULL;
 	module_t *modules = NULL;
 	int n_modules = 0;
 	json_deserialize(tokens, n_tokens, addr, &modules, &n_modules, &network);
+
+	graph_t *g = graph_create();
+	graph_add_node(g, "aaa");
+	graph_add_node(g, "aab");
+	graph_add_node(g, "aac");
+	graph_add_node(g, "aad");
+	graph_add_node(g, "aae");
+	graph_add_edge(g, "aaa", "aab");
+	graph_add_edge(g, "aac", "aab");
+	graph_add_edge(g, "aad", "aae");
+	graph_add_edge(g, "aaa", "aad");
+	graph_print(g, stdout);
+	graph_destroy(g);
 
 	exit(EXIT_SUCCESS);
 }
