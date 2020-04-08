@@ -38,7 +38,7 @@ static void
 json_str_cpy (const char *json, jsmntok_t *tok, char **t)
 {
 	int s_len = tok->end - tok->start;
-	*t = calloc(s_len + 1, 1);
+	*t = (char *) calloc(s_len + 1, 1);
 	strncpy(*t, json + tok->start, s_len);
 }
 
@@ -134,7 +134,7 @@ bad_token (int i, int type, int start_pos, char *text, state_t state)
 	exit(EXIT_FAILURE);
 }
 
-void
+static void
 json_deserialize (jsmntok_t *tokens, int n_tokens, char *text,
                   network_definition_t *network_definition)
 {
@@ -159,10 +159,10 @@ json_deserialize (jsmntok_t *tokens, int n_tokens, char *text,
 				bad_token(i, tokens[i].type, tokens[i].start,
 				          text, state);
 			modules_n = tokens[i].size;
-			modules = calloc(modules_n, sizeof(module_t));
+			modules = (module_t *) calloc(modules_n, sizeof(module_t));
 			network_definition->n_modules = modules_n;
 			network_definition->modules = modules;
-			network = calloc(1, sizeof(network_t));
+			network = (network_t *) calloc(1, sizeof(network_t));
 			network_definition->network = network;
 			i++;
 			state = STATE_BETWEEN;
@@ -235,7 +235,7 @@ json_deserialize (jsmntok_t *tokens, int n_tokens, char *text,
 					          state);
 				if (array_n > 0)
 					modules[modules_i].submodules =
-						calloc(array_n, sizeof(submodule_t));
+						(submodule_t *) calloc(array_n, sizeof(submodule_t));
 				modules[modules_i].n_submodules = array_n;
 				i += 1;
 				state = STATE_MODULE_SUBMODULES_BETWEEN;
@@ -264,18 +264,28 @@ json_deserialize (jsmntok_t *tokens, int n_tokens, char *text,
 			if (modules[modules_i].params != NULL)
 				bad_token(i, tokens[i].type, tokens[i].start,
 				          text, state);
-			if (array_n > 0)
-				modules[modules_i].params = calloc(array_n, sizeof(char *));
+			if (array_n > 0) {
+				modules[modules_i].params =
+					(raw_param_t *) calloc(array_n, sizeof(raw_param_t));
+			}
 			modules[modules_i].n_params = array_n;
+			i += 1;
 			for (array_i = 0; array_i < array_n; array_i++) {
-				i += 1;
-				if (tokens[i].type != JSMN_STRING)
+				if ((tokens[i].type != JSMN_OBJECT) ||
+				    (tokens[i].size != 1) ||
+				    (tokens[i + 1].type != JSMN_STRING) ||
+				    (tokens[i + 2].type != JSMN_STRING))
+				{
 					bad_token(i, tokens[i].type,
 					          tokens[i].start, text, state);
-				json_str_cpy(text, &tokens[i],
-				             &modules[modules_i].params[array_i]);
+				}
+				json_str_cpy(text, &tokens[i + 1],
+				             &modules[modules_i].params[array_i].name);
+				json_str_cpy(text, &tokens[i + 2],
+				             &modules[modules_i].params[array_i].value);
+				i += 3;
+
 			}
-			i += 1;
 			state = STATE_MODULE;
 		} else if (state == STATE_MODULE_GATES) {
 			array_n = tokens[i].size;
@@ -283,7 +293,8 @@ json_deserialize (jsmntok_t *tokens, int n_tokens, char *text,
 				bad_token(i, tokens[i].type, tokens[i].start,
 				          text, state);
 			if (array_n > 0)
-				modules[modules_i].gates = calloc(array_n, sizeof(char *));
+				modules[modules_i].gates =
+					(char **) calloc(array_n, sizeof(char *));
 			modules[modules_i].n_gates = array_n;
 			for (array_i = 0; array_i < array_n; array_i++) {
 				i += 1;
@@ -302,7 +313,8 @@ json_deserialize (jsmntok_t *tokens, int n_tokens, char *text,
 				bad_token(i, tokens[i].type, tokens[i].start,
 				          text, state);
 			if (array_n > 0)
-				modules[modules_i].connections = calloc(array_n, sizeof(char *));
+				modules[modules_i].connections =
+					(char **) calloc(array_n, sizeof(char *));
 			modules[modules_i].n_connections = array_n;
 			for (array_i = 0; array_i < array_n; array_i++) {
 				i += 1;
@@ -370,15 +382,22 @@ json_deserialize (jsmntok_t *tokens, int n_tokens, char *text,
 				          text, state);
 			if (array_n > 0)
 				modules[modules_i].submodules[array_i].params =
-					calloc(array_n, sizeof(char *));
+					(raw_param_t *) calloc(array_n, sizeof(raw_param_t));
 			modules[modules_i].submodules[array_i].n_params = array_n;
 			for (subarray_i = 0; subarray_i < subarray_n; subarray_i++) {
-				i += 1;
-				if (tokens[i].type != JSMN_STRING)
+				if ((tokens[i].type != JSMN_OBJECT) ||
+				    (tokens[i].size != 1) ||
+				    (tokens[i + 1].type != JSMN_STRING) ||
+				    (tokens[i + 2].type != JSMN_STRING))
+				{
 					bad_token(i, tokens[i].type,
 					          tokens[i].start, text, state);
-				json_str_cpy(text, &tokens[i],
-				             &modules[modules_i].submodules[array_i].params[subarray_i]);
+				}
+				json_str_cpy(text, &tokens[i + 1],
+				             &modules[modules_i].submodules[array_i].params[subarray_i].name);
+				json_str_cpy(text, &tokens[i + 2],
+				             &modules[modules_i].submodules[array_i].params[subarray_i].value);
+				i += 3;
 			}
 			i += 1;
 			state = STATE_MODULE_SUBMODULE;
@@ -407,15 +426,23 @@ json_deserialize (jsmntok_t *tokens, int n_tokens, char *text,
 				bad_token(i, tokens[i].type, tokens[i].start,
 				          text, state);
 			if (array_n > 0)
-				network->params = calloc(array_n, sizeof(char *));
+				network->params =
+					(raw_param_t *) calloc(array_n, sizeof(raw_param_t));
 			network->n_params = array_n;
 			for (array_i = 0; array_i < array_n; array_i++) {
-				i += 1;
-				if (tokens[i].type != JSMN_STRING)
+				if ((tokens[i].type != JSMN_OBJECT) ||
+				    (tokens[i].size != 1) ||
+				    (tokens[i + 1].type != JSMN_STRING) ||
+				    (tokens[i + 2].type != JSMN_STRING))
+				{
 					bad_token(i, tokens[i].type,
 					          tokens[i].start, text, state);
-				json_str_cpy(text, &tokens[i],
-				             &network->params[array_i]);
+				}
+				json_str_cpy(text, &tokens[i + 1],
+				             &network->params[array_i].name);
+				json_str_cpy(text, &tokens[i + 2],
+				             &network->params[array_i].value);
+				i += 3;
 			}
 			i += 1;
 			state = STATE_NETWORK;
@@ -424,8 +451,8 @@ json_deserialize (jsmntok_t *tokens, int n_tokens, char *text,
 
 	return;
 }
-
-void
+/*
+static void
 json_print (jsmntok_t *tokens, int n_tokens, char *text)
 {
 	if (n_tokens == 0)
@@ -440,7 +467,7 @@ json_print (jsmntok_t *tokens, int n_tokens, char *text)
 	fflush(stdout);
 	return;
 }
-
+*/
 int
 json_read_file (char *text, off_t file_size,
                 network_definition_t *network_definition)
@@ -452,7 +479,7 @@ json_read_file (char *text, off_t file_size,
 	int n_tokens = jsmn_parse(&parser, text, file_size, NULL, 0);
 	if (n_tokens < 0)
 		return n_tokens;
-	tokens = malloc(sizeof(jsmntok_t) * (size_t) n_tokens);
+	tokens = (jsmntok_t *) malloc(sizeof(jsmntok_t) * (size_t) n_tokens);
 	jsmn_init(&parser);
 	jsmn_parse(&parser, text, file_size, tokens, n_tokens);
 	/* json_print(tokens, n_tokens, text); */

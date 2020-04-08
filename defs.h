@@ -1,6 +1,8 @@
 #ifndef DEFS_H
 # define DEFS_H
 
+/* graph */
+
 typedef struct node_list node_list_t;
 
 typedef enum {
@@ -28,46 +30,48 @@ typedef struct {
 
 enum { GRAPH_BLK_SIZE = 32 };
 
-typedef struct stack stack_t;
+/* name stack */
 
-struct stack {
+typedef struct name_stack name_stack_t;
+
+struct name_stack {
 	char *name;
-	stack_t *next;
+	name_stack_t *next;
 };
-/*
-typedef enum {
-	NUMBER,
-	PARAM
-} num_or_param;
 
-typedef union {
-	int number_size;
-	char *param_size;
-} vec_size_t;
+/* param stack */
 
-typedef struct {
+enum { PARAM_BLK_SIZE = 32 };
+
+typedef struct param {
 	char *name;
-	num_or_param type;
-	vec_size_t size;
-} gate_t;
-
-typedef struct {
-	char *name;
-	num_or_param type;
-	vec_size_t size;
+	char *value;
 } param_t;
-*/
+
+typedef struct param_stack {
+	param_t *params;
+	int n;
+	int cap;
+} param_stack_t;
+
+/* network representation */
+
+typedef struct raw_param {
+	char *name;
+	char *value;
+} raw_param_t;
+
 typedef struct {
 	char *name;
 	char *module;
 	char *size;
-	char **params;
+	raw_param_t *params;
 	int n_params;
 } submodule_t;
 
 typedef struct {
 	char *name;
-	char **params;
+	raw_param_t *params;
 	int n_params;
 	submodule_t *submodules;
 	int n_submodules;
@@ -79,7 +83,7 @@ typedef struct {
 
 typedef struct {
 	char *module;
-	char **params;
+	raw_param_t *params;
 	int n_params;
 } network_t;
 

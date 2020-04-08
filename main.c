@@ -11,7 +11,9 @@
 #include "parser.h"
 #include "defs.h"
 
-void
+/* file reading */
+
+static void
 error (const char * errmsg, ...)
 {
 	va_list args;
@@ -21,7 +23,7 @@ error (const char * errmsg, ...)
 	exit(EXIT_FAILURE);
 }
 
-off_t
+static off_t
 read_file (int argc, char *argv[], char **addr)
 {
 	if (argc != 2)
@@ -43,26 +45,27 @@ read_file (int argc, char *argv[], char **addr)
 	return st.st_size;
 }
 
+/* graph */
 
-graph_t *
-graph_create ()
+static graph_t *
+graph_create (void)
 {
-	graph_t *g = malloc(sizeof(graph_t));
+	graph_t *g = (graph_t *) malloc(sizeof(graph_t));
 	g->n_nodes = 0;
 	g->cap_nodes = GRAPH_BLK_SIZE;
-	g->nodes = calloc(g->cap_nodes, sizeof(node_t));
+	g->nodes = (node_t *) calloc(g->cap_nodes, sizeof(node_t));
 	return g;
 }
 
-node_t *
+static node_t *
 graph_add_node (graph_t *g, char *name, node_type type)
 {
 	int i = g->n_nodes;
 	if (g->n_nodes == g->cap_nodes) {
 		g->cap_nodes += GRAPH_BLK_SIZE;
-		g->nodes = realloc(g->nodes, g->cap_nodes * sizeof(node_t));
+		g->nodes = (node_t *) realloc(g->nodes, g->cap_nodes * sizeof(node_t));
 	}
-	g->nodes[i].name = malloc(strlen(name) + 1);
+	g->nodes[i].name = (char *) malloc(strlen(name) + 1);
 	strncpy(g->nodes[i].name, name, strlen(name) + 1);
 	g->nodes[i].adj = NULL;
 	g->nodes[i].n = i;
@@ -71,7 +74,7 @@ graph_add_node (graph_t *g, char *name, node_type type)
 	return &(g->nodes[i]);
 }
 
-node_t *
+static node_t *
 graph_find_node (graph_t *g, char *name)
 {
 	for (int i = 0; i < g->n_nodes; i++)
@@ -80,7 +83,7 @@ graph_find_node (graph_t *g, char *name)
 	return NULL;
 }
 
-void
+static void
 graph_add_edge (graph_t *g, char *name_a, char *name_b, node_type type)
 {
 	node_t *node_a, *node_b;
@@ -90,17 +93,17 @@ graph_add_edge (graph_t *g, char *name_a, char *name_b, node_type type)
 		node_a = graph_add_node(g, name_a, type);
 	if (node_b == NULL)
 		node_b = graph_add_node(g, name_b, type);
-	node_list_t *l = malloc(sizeof(node_list_t));
+	node_list_t *l = (node_list_t *) malloc(sizeof(node_list_t));
 	l->next = node_a->adj;
 	l->node = node_b;
 	node_a->adj = l;
-	l = malloc(sizeof(node_list_t));
+	l = (node_list_t *) malloc(sizeof(node_list_t));
 	l->next = node_b->adj;
 	l->node = node_a;
 	node_b->adj = l;
 }
 
-void
+static void
 graph_print (graph_t *g, FILE *stream)
 {
 	node_list_t *l, *l_next;
@@ -121,7 +124,7 @@ graph_print (graph_t *g, FILE *stream)
 	fprintf(stream, "}\n");
 }
 
-void
+static void
 graph_destroy (graph_t *g)
 {
 	node_list_t *l, *l_next;
@@ -138,42 +141,43 @@ graph_destroy (graph_t *g)
 	free(g);
 }
 
+/* name stack */
 
-stack_t *
-stack_create (char *name)
+static name_stack_t *
+name_stack_create (char *name)
 {
-	stack_t *s = malloc(sizeof(stack_t));
+	name_stack_t *s = (name_stack_t *) malloc(sizeof(name_stack_t));
 	s->next = NULL;
-	s->name = malloc(strlen(name) + 1);
+	s->name = (char *) malloc(strlen(name) + 1);
 	strncpy(s->name, name, strlen(name) + 1);
 	return s;
 }
 
-void
-stack_enter (stack_t *s, char *name, int index)
+static void
+name_stack_enter (name_stack_t *s, char *name, int index)
 {
 	int len;
-	stack_t *head = s;
+	name_stack_t *head = s;
 	while (head->next != NULL)
 		head = head->next;
-	head->next = malloc(sizeof(stack_t));
+	head->next = (name_stack_t *) malloc(sizeof(name_stack_t));
 	head = head->next;
 	head->next = NULL;
 	if (index < 0) {
 		len = strlen(name) + 1;
-		head->name = malloc(len);
+		head->name = (char *) malloc(len);
 		strncpy(s->name, name, len);
 	} else {
 		len = snprintf(0, 0, "%s[%d]", name, index) + 1;
-		head->name = malloc(len);
+		head->name = (char *) malloc(len);
 		snprintf(head->name, len, "%s[%d]", name, index);
 	}
 }
 
-void
-stack_leave (stack_t *s)
+static void
+name_stack_leave (name_stack_t *s)
 {
-	stack_t *head = s;
+	name_stack_t *head = s;
 	if (head->next == NULL)
 		return;
 	while (head->next->next != NULL)
@@ -183,17 +187,17 @@ stack_leave (stack_t *s)
 	head->next = NULL;
 }
 
-char *
-stack_name (stack_t *s)
+static char *
+name_stack_name (name_stack_t *s)
 {
 	unsigned len = 0, off = 0;
-	stack_t *head = s;
+	name_stack_t *head = s;
 	while (head->next != NULL) {
 		len += strlen(head->name) + 1;
 		head = head->next;
 	}
 	len += strlen(head->name) + 1;
-	char *name = malloc(len);
+	char *name = (char *) malloc(len);
 	head = s;
 	while (head->next != NULL) {
 		snprintf(name + off, strlen(head->name) + 2, "%s.", head->name);
@@ -204,12 +208,12 @@ stack_name (stack_t *s)
 	return name;
 }
 
-char *
-get_full_name (stack_t *s, char *name)
+static char *
+get_full_name (name_stack_t *s, char *name)
 {
-	char *name_s = stack_name(s);
-	char *full_name = malloc(strlen(name) +
-	                         strlen(name_s) + 2);
+	char *name_s = name_stack_name(s);
+	char *full_name =
+		(char *) malloc(strlen(name) + strlen(name_s) + 2);
 	strncpy(full_name, name_s, strlen(name_s));
 	full_name[strlen(name_s)] = '.';
 	strncpy(full_name + strlen(name_s) + 1, name,
@@ -218,7 +222,47 @@ get_full_name (stack_t *s, char *name)
 	return full_name;
 }
 
-module_t *
+/* param stack */
+
+static param_stack_t *
+param_stack_create (void)
+{
+	param_stack_t *p = (param_stack_t *) malloc(sizeof(param_stack_t));
+	p->n = 0;
+	p->cap = PARAM_BLK_SIZE;
+	p->params = (param_t *) calloc(p->cap, sizeof(param_t));
+	return p;
+}
+
+static void
+param_stack_enter (param_stack_t *p, raw_param_t *r)
+{
+	int i = p->n;
+	if (p->n == p->cap) {
+		p->cap += PARAM_BLK_SIZE;
+		p->params = (param_t *) realloc(p->params, p->cap * sizeof(param_t));
+	}
+
+}
+
+static void
+param_stack_leave (param_stack_t *p)
+{
+}
+
+static char *
+param_stack_search (param_stack_t *p)
+{
+}
+
+static char *
+param_stack_eval (param_stack_t *p)
+{
+}
+
+/* module to graph conversion */
+
+static module_t *
 find_module (network_definition_t *net, char *name)
 {
 	for (int i = 0; i < net->n_modules; i++)
@@ -227,12 +271,12 @@ find_module (network_definition_t *net, char *name)
 	return NULL;
 }
 
-void
-expand_module (graph_t *g, module_t *module, stack_t *stack,
+static void
+expand_module (graph_t *g, module_t *module, name_stack_t *stack,
                network_definition_t *net)
 {
 	if (module->submodules == NULL) {
-		char *name_s = stack_name(stack);
+		char *name_s = name_stack_name(stack);
 		graph_add_node(g, name_s, NODE_NODE);
 		for (int i = 0; i < module->n_gates; i++) {
 			char *full_name = get_full_name(stack, module->gates[i]);
@@ -251,23 +295,23 @@ expand_module (graph_t *g, module_t *module, stack_t *stack,
 		}
 		if (size > 0) {
 			for (int j = 0; j < size; j++) {
-				stack_enter(stack, smodule.name, j);
+				name_stack_enter(stack, smodule.name, j);
 				module_t *module = find_module(net,
 				                               smodule.module);
 				expand_module(g, module, stack, net);
-				stack_leave(stack);
+				name_stack_leave(stack);
 			}
 		} else {
-			stack_enter(stack, smodule.name, -1);
+			name_stack_enter(stack, smodule.name, -1);
 			module_t *module = find_module(net, smodule.module);
 			expand_module(g, module, stack, net);
-			stack_leave(stack);
+			name_stack_leave(stack);
 		}
 	}
 	for (int i = 0; i < module->n_connections; i++) {
 		int l = strlen(module->connections[i]);
-		char *name_a = malloc(l + 1);
-		char *name_b = malloc(l + 1);
+		char *name_a = (char *) malloc(l + 1);
+		char *name_b = (char *) malloc(l + 1);
 		sscanf(module->connections[i], "%s %s", name_a, name_b);
 
 		char *full_name_a = get_full_name(stack, name_a);
@@ -280,12 +324,12 @@ expand_module (graph_t *g, module_t *module, stack_t *stack,
 	}
 }
 
-graph_t *
+static graph_t *
 definition_to_graph (network_definition_t *net)
 {
 	module_t *root_module = find_module(net, net->network->module);
 	graph_t *g = graph_create();
-	stack_t *stack = stack_create("network");
+	name_stack_t *stack = name_stack_create("network");
 	expand_module(g, root_module, stack, net);
 	free(stack);
 	return g;
@@ -296,7 +340,7 @@ int
 main (int argc, char *argv[])
 {
 	char *addr = NULL;
-	network_definition_t network_definition = { };
+	network_definition_t network_definition = { 0 };
 
 	off_t file_size = read_file(argc, argv, &addr);
 	int res = json_read_file(addr, file_size, &network_definition);
