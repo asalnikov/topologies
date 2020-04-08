@@ -233,8 +233,9 @@ json_deserialize (jsmntok_t *tokens, int n_tokens, char *text,
 					bad_token(i, tokens[i].type,
 					          tokens[i].start, text,
 					          state);
-				modules[modules_i].submodules = calloc(array_n,
-								       sizeof(submodule_t));
+				if (array_n > 0)
+					modules[modules_i].submodules =
+						calloc(array_n, sizeof(submodule_t));
 				modules[modules_i].n_submodules = array_n;
 				i += 1;
 				state = STATE_MODULE_SUBMODULES_BETWEEN;

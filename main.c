@@ -193,12 +193,13 @@ stack_name (stack_t *s)
 	}
 	len += strlen(head->name) + 1;
 	char *name = malloc(len);
+	head = s;
 	while (head->next != NULL) {
 		snprintf(name + off, strlen(head->name) + 2, "%s.", head->name);
 		off += strlen(head->name) + 1;
 		head = head->next;
 	}
-	snprintf(name + off, strlen(head->name) + 2, "%s.", head->name);
+	snprintf(name + off, strlen(head->name) + 2, "%s", head->name);
 	return name;
 }
 
