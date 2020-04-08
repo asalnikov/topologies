@@ -55,7 +55,7 @@ graph_create ()
 }
 
 node_t *
-graph_add_node (graph_t *g, char *name)
+graph_add_node (graph_t *g, char *name, node_type type)
 {
 	int i = g->n_nodes;
 	if (g->n_nodes == g->cap_nodes) {
@@ -66,6 +66,7 @@ graph_add_node (graph_t *g, char *name)
 	strncpy(g->nodes[i].name, name, strlen(name) + 1);
 	g->nodes[i].adj = NULL;
 	g->nodes[i].n = i;
+	g->nodes[i].type = type;
 	g->n_nodes++;
 	return &(g->nodes[i]);
 }
@@ -80,15 +81,15 @@ graph_find_node (graph_t *g, char *name)
 }
 
 void
-graph_add_edge (graph_t *g, char *name_a, char *name_b)
+graph_add_edge (graph_t *g, char *name_a, char *name_b, node_type type)
 {
 	node_t *node_a, *node_b;
 	node_a = graph_find_node(g, name_a);
 	node_b = graph_find_node(g, name_b);
 	if (node_a == NULL)
-		node_a = graph_add_node(g, name_a);
+		node_a = graph_add_node(g, name_a, type);
 	if (node_b == NULL)
-		node_b = graph_add_node(g, name_b);
+		node_b = graph_add_node(g, name_b, type);
 	node_list_t *l = malloc(sizeof(node_list_t));
 	l->next = node_a->adj;
 	l->node = node_b;
@@ -203,6 +204,20 @@ stack_name (stack_t *s)
 	return name;
 }
 
+char *
+get_full_name (stack_t *s, char *name)
+{
+	char *name_s = stack_name(s);
+	char *full_name = malloc(strlen(name) +
+	                         strlen(name_s) + 2);
+	strncpy(full_name, name_s, strlen(name_s));
+	full_name[strlen(name_s)] = '.';
+	strncpy(full_name + strlen(name_s) + 1, name,
+	        strlen(name) + 1);
+	free(name_s);
+	return full_name;
+}
+
 module_t *
 find_module (network_definition_t *net, char *name)
 {
@@ -217,7 +232,13 @@ expand_module (graph_t *g, module_t *module, stack_t *stack,
                network_definition_t *net)
 {
 	if (module->submodules == NULL) {
-		graph_add_node(g, stack_name(stack));
+		char *name_s = stack_name(stack);
+		graph_add_node(g, name_s, NODE_NODE);
+		for (int i = 0; i < module->n_gates; i++) {
+			char *full_name = get_full_name(stack, module->gates[i]);
+			graph_add_edge(g, full_name, name_s, NODE_GATE);
+		}
+		free(name_s);
 		return;
 	}
 	for (int i = 0; i < module->n_submodules; i++) {
@@ -244,24 +265,18 @@ expand_module (graph_t *g, module_t *module, stack_t *stack,
 		}
 	}
 	for (int i = 0; i < module->n_connections; i++) {
-		char *name_s = stack_name(stack);
 		int l = strlen(module->connections[i]);
 		char *name_a = malloc(l + 1);
 		char *name_b = malloc(l + 1);
 		sscanf(module->connections[i], "%s %s", name_a, name_b);
-		char *full_name_a = malloc(strlen(name_a) +
-					   strlen(name_s) + 2);
-		char *full_name_b = malloc(strlen(name_b) +
-					   strlen(name_s) + 2);
-		strncpy(full_name_a, name_s, strlen(name_s));
-		full_name_a[strlen(name_s)] = '.';
-		strncpy(full_name_a + strlen(name_s) + 1, name_a,
-			strlen(name_a) + 1);
-		strncpy(full_name_b, name_s, strlen(name_s));
-		full_name_b[strlen(name_s)] = '.';
-		strncpy(full_name_b + strlen(name_s) + 1, name_b,
-			strlen(name_b) + 1);
-		graph_add_edge(g, full_name_a, full_name_b);
+
+		char *full_name_a = get_full_name(stack, name_a);
+		char *full_name_b = get_full_name(stack, name_b);
+		graph_add_edge(g, full_name_a, full_name_b, NODE_GATE);
+		free(full_name_a);
+		free(full_name_b);
+		free(name_a);
+		free(name_b);
 	}
 }
 
@@ -272,6 +287,7 @@ definition_to_graph (network_definition_t *net)
 	graph_t *g = graph_create();
 	stack_t *stack = stack_create("network");
 	expand_module(g, root_module, stack, net);
+	free(stack);
 	return g;
 }
 

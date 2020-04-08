@@ -264,7 +264,9 @@ json_deserialize (jsmntok_t *tokens, int n_tokens, char *text,
 			if (modules[modules_i].params != NULL)
 				bad_token(i, tokens[i].type, tokens[i].start,
 				          text, state);
-			modules[modules_i].params = calloc(array_n, sizeof(char *));
+			if (array_n > 0)
+				modules[modules_i].params = calloc(array_n, sizeof(char *));
+			modules[modules_i].n_params = array_n;
 			for (array_i = 0; array_i < array_n; array_i++) {
 				i += 1;
 				if (tokens[i].type != JSMN_STRING)
@@ -280,7 +282,9 @@ json_deserialize (jsmntok_t *tokens, int n_tokens, char *text,
 			if (modules[modules_i].gates != NULL)
 				bad_token(i, tokens[i].type, tokens[i].start,
 				          text, state);
-			modules[modules_i].gates = calloc(array_n, sizeof(char *));
+			if (array_n > 0)
+				modules[modules_i].gates = calloc(array_n, sizeof(char *));
+			modules[modules_i].n_gates = array_n;
 			for (array_i = 0; array_i < array_n; array_i++) {
 				i += 1;
 				if (tokens[i].type != JSMN_STRING)
@@ -297,7 +301,8 @@ json_deserialize (jsmntok_t *tokens, int n_tokens, char *text,
 			if (modules[modules_i].connections != NULL)
 				bad_token(i, tokens[i].type, tokens[i].start,
 				          text, state);
-			modules[modules_i].connections = calloc(array_n, sizeof(char *));
+			if (array_n > 0)
+				modules[modules_i].connections = calloc(array_n, sizeof(char *));
 			modules[modules_i].n_connections = array_n;
 			for (array_i = 0; array_i < array_n; array_i++) {
 				i += 1;
@@ -363,8 +368,10 @@ json_deserialize (jsmntok_t *tokens, int n_tokens, char *text,
 			if (modules[modules_i].submodules[array_i].params != NULL)
 				bad_token(i, tokens[i].type, tokens[i].start,
 				          text, state);
-			modules[modules_i].submodules[array_i].params =
-				calloc(array_n, sizeof(char *));
+			if (array_n > 0)
+				modules[modules_i].submodules[array_i].params =
+					calloc(array_n, sizeof(char *));
+			modules[modules_i].submodules[array_i].n_params = array_n;
 			for (subarray_i = 0; subarray_i < subarray_n; subarray_i++) {
 				i += 1;
 				if (tokens[i].type != JSMN_STRING)
@@ -399,7 +406,9 @@ json_deserialize (jsmntok_t *tokens, int n_tokens, char *text,
 			if (network->params != NULL)
 				bad_token(i, tokens[i].type, tokens[i].start,
 				          text, state);
-			network->params = calloc(array_n, sizeof(char *));
+			if (array_n > 0)
+				network->params = calloc(array_n, sizeof(char *));
+			network->n_params = array_n;
 			for (array_i = 0; array_i < array_n; array_i++) {
 				i += 1;
 				if (tokens[i].type != JSMN_STRING)
@@ -449,5 +458,6 @@ json_read_file (char *text, off_t file_size,
 	/* json_print(tokens, n_tokens, text); */
 
 	json_deserialize(tokens, n_tokens, text, network_definition);
+	free(tokens);
 	return 0;
 }

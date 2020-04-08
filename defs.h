@@ -3,10 +3,16 @@
 
 typedef struct node_list node_list_t;
 
+typedef enum {
+	NODE_NODE,
+	NODE_GATE
+} node_type;
+
 typedef struct {
 	char *name;
 	node_list_t *adj;
 	int n;
+	node_type type;
 } node_t;
 
 struct node_list {
@@ -28,7 +34,7 @@ struct stack {
 	char *name;
 	stack_t *next;
 };
-
+/*
 typedef enum {
 	NUMBER,
 	PARAM
@@ -50,22 +56,23 @@ typedef struct {
 	num_or_param type;
 	vec_size_t size;
 } param_t;
-
+*/
 typedef struct {
 	char *name;
 	char *module;
 	char *size;
-	//param_t *params;
 	char **params;
+	int n_params;
 } submodule_t;
 
 typedef struct {
 	char *name;
 	char **params;
+	int n_params;
 	submodule_t *submodules;
 	int n_submodules;
-	//gate_t *gates;
 	char **gates;
+	int n_gates;
 	char **connections;
 	int n_connections;
 } module_t;
@@ -73,6 +80,7 @@ typedef struct {
 typedef struct {
 	char *module;
 	char **params;
+	int n_params;
 } network_t;
 
 typedef struct {

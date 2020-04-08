@@ -22,10 +22,15 @@
 		}
 	  ],
 	  "connections": [
-		"simplevec[0]  simplevec[1]",
-		"simplevec[2]  simplevec[3]"
+		"simplevec[0].gate  simplevec[1].gate",
+		"simplevec[2].gate  simplevec[3].gate",
+		"simplevec[0].gate out1",
+		"simplevec[2].gate out2"
 	  ],
-	  "gates": []
+	  "gates": [
+		"out1",
+		"out2"
+	  ]
 	}
 },
 
