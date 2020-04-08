@@ -45,7 +45,7 @@ enum { PARAM_BLK_SIZE = 32 };
 
 typedef struct param {
 	char *name;
-	char *value;
+	double value;
 } param_t;
 
 typedef struct param_stack {

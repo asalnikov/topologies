@@ -3,10 +3,13 @@
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdbool.h>
 #include <string.h>
 #include <unistd.h>
 #include <sys/stat.h>
 #include <sys/mman.h>
+
+#include "tinyexpr.h"
 
 #include "parser.h"
 #include "defs.h"
@@ -235,29 +238,80 @@ param_stack_create (void)
 }
 
 static void
+param_stack_leave (param_stack_t *p)
+{
+	p->n--;
+}
+
+static int
+param_stack_to_te_vars (param_stack_t *p, te_variable **vars)
+{
+	int VARS_BLK_SIZE = 32;
+	int te_vars_n = 0;
+	int te_vars_cap = VARS_BLK_SIZE;
+	*vars = (te_variable *) calloc(te_vars_cap, sizeof(te_variable));
+
+	/* add starting from the tail -- from the most recent */
+	for (int i = p->n - 1; i >= 0; i--) {
+		bool is_present = false;
+		int param_name_len = strlen(p->params[i].name);
+		for (int j = 0; j < te_vars_n; j++) {
+			if (strncmp(p->params[i].name, (*vars)[j].name, param_name_len)
+				== 0)
+			{
+				is_present = true;
+				break;
+			}
+		}
+		if (is_present) {
+			continue;
+		}
+		if (te_vars_n == te_vars_cap) {
+			te_vars_cap += VARS_BLK_SIZE;
+			*vars = (te_variable *) realloc(*vars,
+				te_vars_cap * sizeof(te_variable));
+		}
+		(*vars)[te_vars_n].name = p->params[i].name;
+		(*vars)[te_vars_n].address = &p->params[i].value;
+		te_vars_n++;
+	}
+
+	return te_vars_n;
+}
+
+static double
+param_stack_eval (param_stack_t *p, char *value)
+{
+	te_variable *vars = NULL;
+	int vars_n = param_stack_to_te_vars(p, &vars);
+	int err;
+	te_expr *e = te_compile(value, vars, vars_n, &err);
+	if (e == NULL) {
+		error("could not evaluate %s (error near %d)\n", value, err);
+		return 0.0;
+	} else {
+		return te_eval(e);
+	}
+}
+
+static void
 param_stack_enter (param_stack_t *p, raw_param_t *r)
 {
-	int i = p->n;
 	if (p->n == p->cap) {
 		p->cap += PARAM_BLK_SIZE;
 		p->params = (param_t *) realloc(p->params, p->cap * sizeof(param_t));
 	}
 
+	/* param stack's lifetime is contained in raw params' lifetime */
+	p->params->name = r->name;
+	p->params->value = param_stack_eval(p, r->value);
+	p->n++;
 }
 
 static void
-param_stack_leave (param_stack_t *p)
+param_stack_destroy (param_stack_t *p)
 {
-}
-
-static char *
-param_stack_search (param_stack_t *p)
-{
-}
-
-static char *
-param_stack_eval (param_stack_t *p)
-{
+	free(p);
 }
 
 /* module to graph conversion */
@@ -272,9 +326,12 @@ find_module (network_definition_t *net, char *name)
 }
 
 static void
-expand_module (graph_t *g, module_t *module, name_stack_t *stack,
-               network_definition_t *net)
+expand_module (graph_t *g, module_t *module, network_definition_t *net,
+               name_stack_t *stack, param_stack_t *p)
 {
+	for (int i = 0; i < module->n_params; i++) {
+		param_stack_enter(p, &module->params[i]);
+	}
 	if (module->submodules == NULL) {
 		char *name_s = name_stack_name(stack);
 		graph_add_node(g, name_s, NODE_NODE);
@@ -287,6 +344,9 @@ expand_module (graph_t *g, module_t *module, name_stack_t *stack,
 	}
 	for (int i = 0; i < module->n_submodules; i++) {
 		submodule_t smodule = module->submodules[i];
+		for (int i = 0; i < smodule.n_params; i++) {
+			param_stack_enter(p, &smodule.params[i]);
+		}
 		int size;
 		if (smodule.size == NULL) {
 			size = 0;
@@ -298,14 +358,17 @@ expand_module (graph_t *g, module_t *module, name_stack_t *stack,
 				name_stack_enter(stack, smodule.name, j);
 				module_t *module = find_module(net,
 				                               smodule.module);
-				expand_module(g, module, stack, net);
+				expand_module(g, module, net, stack, p);
 				name_stack_leave(stack);
 			}
 		} else {
 			name_stack_enter(stack, smodule.name, -1);
 			module_t *module = find_module(net, smodule.module);
-			expand_module(g, module, stack, net);
+			expand_module(g, module, net, stack, p);
 			name_stack_leave(stack);
+		}
+		for (int i = 0; i < smodule.n_params; i++) {
+			param_stack_leave(p);
 		}
 	}
 	for (int i = 0; i < module->n_connections; i++) {
@@ -322,6 +385,9 @@ expand_module (graph_t *g, module_t *module, name_stack_t *stack,
 		free(name_a);
 		free(name_b);
 	}
+	for (int i = 0; i < module->n_params; i++) {
+		param_stack_leave(p);
+	}
 }
 
 static graph_t *
@@ -330,7 +396,16 @@ definition_to_graph (network_definition_t *net)
 	module_t *root_module = find_module(net, net->network->module);
 	graph_t *g = graph_create();
 	name_stack_t *stack = name_stack_create("network");
-	expand_module(g, root_module, stack, net);
+	param_stack_t *p = param_stack_create();
+	for (int i = 0; i < net->network->n_params; i++) {
+		param_stack_enter(p, &net->network->params[i]);
+	}
+	expand_module(g, root_module, net, stack, p);
+	for (int i = 0; i < net->network->n_params; i++) {
+		/* not required, can be removed for optimization */
+		param_stack_leave(p);
+	}
+	param_stack_destroy(p);
 	free(stack);
 	return g;
 }
