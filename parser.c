@@ -383,7 +383,7 @@ json_deserialize (jsmntok_t *tokens, int n_tokens, char *text,
 			if (array_n > 0)
 				modules[modules_i].submodules[array_i].params =
 					(raw_param_t *) calloc(array_n, sizeof(raw_param_t));
-			modules[modules_i].submodules[array_i].n_params = array_n;
+			modules[modules_i].submodules[array_i].n_params = subarray_n;
 			for (subarray_i = 0; subarray_i < subarray_n; subarray_i++) {
 				if ((tokens[i].type != JSMN_OBJECT) ||
 				    (tokens[i].size != 1) ||

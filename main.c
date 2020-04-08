@@ -290,7 +290,10 @@ param_stack_eval (param_stack_t *p, char *value)
 		error("could not evaluate %s (error near %d)\n", value, err);
 		return 0.0;
 	} else {
-		return te_eval(e);
+		double res = te_eval(e);
+		te_free(e);
+		free(vars);
+		return res;
 	}
 }
 
@@ -303,15 +306,24 @@ param_stack_enter (param_stack_t *p, raw_param_t *r)
 	}
 
 	/* param stack's lifetime is contained in raw params' lifetime */
-	p->params->name = r->name;
-	p->params->value = param_stack_eval(p, r->value);
+	p->params[p->n].name = r->name;
+	p->params[p->n].value = param_stack_eval(p, r->value);
 	p->n++;
 }
 
 static void
 param_stack_destroy (param_stack_t *p)
 {
+	free(p->params);
 	free(p);
+}
+
+static void
+param_stack_print (param_stack_t *p, FILE *stream)
+{
+	for (int i = 0; i < p->n; i++) {
+		fprintf(stream, "%s = %f, ", p->params[i].name, p->params[i].value);
+	}
 }
 
 /* module to graph conversion */
@@ -338,52 +350,56 @@ expand_module (graph_t *g, module_t *module, network_definition_t *net,
 		for (int i = 0; i < module->n_gates; i++) {
 			char *full_name = get_full_name(stack, module->gates[i]);
 			graph_add_edge(g, full_name, name_s, NODE_GATE);
+			free(full_name);
 		}
+		printf("%s ", name_s);
+		param_stack_print (p, stdout);
+		printf("\n");
 		free(name_s);
-		return;
-	}
-	for (int i = 0; i < module->n_submodules; i++) {
-		submodule_t smodule = module->submodules[i];
-		for (int i = 0; i < smodule.n_params; i++) {
-			param_stack_enter(p, &smodule.params[i]);
-		}
-		int size;
-		if (smodule.size == NULL) {
-			size = 0;
-		} else {
-			sscanf(smodule.size, "%d", &size);
-		}
-		if (size > 0) {
-			for (int j = 0; j < size; j++) {
-				name_stack_enter(stack, smodule.name, j);
-				module_t *module = find_module(net,
-				                               smodule.module);
+	} else {
+		for (int i = 0; i < module->n_submodules; i++) {
+			submodule_t smodule = module->submodules[i];
+			for (int i = 0; i < smodule.n_params; i++) {
+				param_stack_enter(p, &smodule.params[i]);
+			}
+			int size;
+			if (smodule.size == NULL) {
+				size = 0;
+			} else {
+				sscanf(smodule.size, "%d", &size);
+			}
+			if (size > 0) {
+				for (int j = 0; j < size; j++) {
+					name_stack_enter(stack, smodule.name, j);
+					module_t *module = find_module(net,
+								       smodule.module);
+					expand_module(g, module, net, stack, p);
+					name_stack_leave(stack);
+				}
+			} else {
+				name_stack_enter(stack, smodule.name, -1);
+				module_t *module = find_module(net, smodule.module);
 				expand_module(g, module, net, stack, p);
 				name_stack_leave(stack);
 			}
-		} else {
-			name_stack_enter(stack, smodule.name, -1);
-			module_t *module = find_module(net, smodule.module);
-			expand_module(g, module, net, stack, p);
-			name_stack_leave(stack);
+			for (int i = 0; i < smodule.n_params; i++) {
+				param_stack_leave(p);
+			}
 		}
-		for (int i = 0; i < smodule.n_params; i++) {
-			param_stack_leave(p);
-		}
-	}
-	for (int i = 0; i < module->n_connections; i++) {
-		int l = strlen(module->connections[i]);
-		char *name_a = (char *) malloc(l + 1);
-		char *name_b = (char *) malloc(l + 1);
-		sscanf(module->connections[i], "%s %s", name_a, name_b);
+		for (int i = 0; i < module->n_connections; i++) {
+			int l = strlen(module->connections[i]);
+			char *name_a = (char *) malloc(l + 1);
+			char *name_b = (char *) malloc(l + 1);
+			sscanf(module->connections[i], "%s %s", name_a, name_b);
 
-		char *full_name_a = get_full_name(stack, name_a);
-		char *full_name_b = get_full_name(stack, name_b);
-		graph_add_edge(g, full_name_a, full_name_b, NODE_GATE);
-		free(full_name_a);
-		free(full_name_b);
-		free(name_a);
-		free(name_b);
+			char *full_name_a = get_full_name(stack, name_a);
+			char *full_name_b = get_full_name(stack, name_b);
+			graph_add_edge(g, full_name_a, full_name_b, NODE_GATE);
+			free(full_name_a);
+			free(full_name_b);
+			free(name_a);
+			free(name_b);
+		}
 	}
 	for (int i = 0; i < module->n_params; i++) {
 		param_stack_leave(p);
@@ -406,6 +422,7 @@ definition_to_graph (network_definition_t *net)
 		param_stack_leave(p);
 	}
 	param_stack_destroy(p);
+	free(stack->name);
 	free(stack);
 	return g;
 }
