@@ -6,6 +6,7 @@
 #include <stdbool.h>
 #include <string.h>
 #include <unistd.h>
+#include <math.h>
 #include <sys/stat.h>
 #include <sys/mman.h>
 
@@ -289,12 +290,11 @@ param_stack_eval (param_stack_t *p, char *value)
 	if (e == NULL) {
 		error("could not evaluate %s (error near %d)\n", value, err);
 		return 0.0;
-	} else {
-		double res = te_eval(e);
-		te_free(e);
-		free(vars);
-		return res;
 	}
+	double res = te_eval(e);
+	te_free(e);
+	free(vars);
+	return res;
 }
 
 static void
@@ -312,18 +312,82 @@ param_stack_enter (param_stack_t *p, raw_param_t *r)
 }
 
 static void
+param_stack_enter_val (param_stack_t *p, char *name, int d)
+{
+	if (p->n == p->cap) {
+		p->cap += PARAM_BLK_SIZE;
+		p->params = (param_t *) realloc(p->params, p->cap * sizeof(param_t));
+	}
+
+	/* param stack's lifetime is contained in name's lifetime */
+	p->params[p->n].name = name;
+	p->params[p->n].value = d;
+	p->n++;
+}
+
+static void
 param_stack_destroy (param_stack_t *p)
 {
 	free(p->params);
 	free(p);
 }
 
-static void
+/* static void
 param_stack_print (param_stack_t *p, FILE *stream)
 {
 	for (int i = 0; i < p->n; i++) {
 		fprintf(stream, "%s = %f, ", p->params[i].name, p->params[i].value);
 	}
+} */
+
+static char *
+eval_conn_name (param_stack_t *p, char *name)
+{
+	int len = strlen(name);
+	char *left, *right;
+
+	int n_params = 0;
+	left = name;
+	while ((left = strchr(left, '[')) != NULL) {
+		left++;
+		n_params++;
+	}
+
+	int *eval_res = calloc(n_params, sizeof(int));
+	int i = 0;
+	int added_len = 0;
+
+	left = name;
+	while ((left = strchr(left, '[')) != NULL) {
+		right = strchr(left, ']');
+		if (right == NULL) {
+			free(eval_res);
+			return NULL;
+		}
+		*right = 0;
+		left++;	
+		eval_res[i] = lrint(param_stack_eval(p, left));
+		*right = ']';
+		added_len += snprintf(0, 0, "%d", eval_res[i]);
+		i++;
+	}
+
+	char *res_str = calloc(len + added_len + 1, sizeof(char));
+	char *t = res_str;
+	left = name;
+	char *prev = left;
+	i = 0;
+	while ((left = strchr(left, '[')) != NULL) {
+		strncpy(t, prev, left - prev + 1);
+		t += left - prev + 1;
+		t += snprintf(t, res_str + len + added_len - t, "%d]", eval_res[i]);
+		left = strchr(left, ']');
+		prev = left + 1;
+		i++;
+	}
+	strcpy(t, prev);
+	free(eval_res);
+	return res_str;
 }
 
 /* module to graph conversion */
@@ -352,9 +416,9 @@ expand_module (graph_t *g, module_t *module, network_definition_t *net,
 			graph_add_edge(g, full_name, name_s, NODE_GATE);
 			free(full_name);
 		}
-		printf("%s ", name_s);
-		param_stack_print (p, stdout);
-		printf("\n");
+		/* printf("%s ", name_s);
+		 param_stack_print (p, stdout);
+		printf("\n"); */
 		free(name_s);
 	} else {
 		for (int i = 0; i < module->n_submodules; i++) {
@@ -387,18 +451,51 @@ expand_module (graph_t *g, module_t *module, network_definition_t *net,
 			}
 		}
 		for (int i = 0; i < module->n_connections; i++) {
-			int l = strlen(module->connections[i]);
-			char *name_a = (char *) malloc(l + 1);
-			char *name_b = (char *) malloc(l + 1);
-			sscanf(module->connections[i], "%s %s", name_a, name_b);
-
-			char *full_name_a = get_full_name(stack, name_a);
-			char *full_name_b = get_full_name(stack, name_b);
-			graph_add_edge(g, full_name_a, full_name_b, NODE_GATE);
-			free(full_name_a);
-			free(full_name_b);
-			free(name_a);
-			free(name_b);
+			if (module->connections[i].loop != NULL) {
+				int start = lrint(param_stack_eval(p,
+					module->connections[i].start));
+				int end = lrint(param_stack_eval(p,
+					module->connections[i].end));
+				if (start > end) {
+					error("%d > %d\n", start, end);
+				}
+				for (int j = start; j <= end; j++) {
+					param_stack_enter_val(p,
+						module->connections[i].loop, j);
+					char *r_name_a = module->connections[i].from;
+					char *r_name_b = module->connections[i].to;
+					char *name_a = eval_conn_name(p, r_name_a);
+					char *name_b = eval_conn_name(p, r_name_b);
+					if (name_a == NULL)
+						error("could not evaluate %s\n", r_name_a);
+					if (name_b == NULL)
+						error("could not evaluate %s\n", r_name_b);
+					char *full_name_a = get_full_name(stack, name_a);
+					char *full_name_b = get_full_name(stack, name_b);
+					graph_add_edge(g, full_name_a, full_name_b, NODE_GATE);
+					free(full_name_a);
+					free(full_name_b);
+					free(name_a);
+					free(name_b);
+					param_stack_leave(p);
+				}
+			} else {
+				char *r_name_a = module->connections[i].from;
+				char *r_name_b = module->connections[i].to;
+				char *name_a = eval_conn_name(p, r_name_a);
+				char *name_b = eval_conn_name(p, r_name_b);
+				if (name_a == NULL)
+					error("could not evaluate %s\n", r_name_a);
+				if (name_b == NULL)
+					error("could not evaluate %s\n", r_name_b);
+				char *full_name_a = get_full_name(stack, name_a);
+				char *full_name_b = get_full_name(stack, name_b);
+				graph_add_edge(g, full_name_a, full_name_b, NODE_GATE);
+				free(full_name_a);
+				free(full_name_b);
+				free(name_a);
+				free(name_b);
+			}
 		}
 	}
 	for (int i = 0; i < module->n_params; i++) {

@@ -56,10 +56,18 @@ typedef struct param_stack {
 
 /* network representation */
 
-typedef struct raw_param {
+typedef struct {
 	char *name;
 	char *value;
 } raw_param_t;
+
+typedef struct {
+	char *from;
+	char *to;
+	char *loop;
+	char *start;
+	char *end;
+} connection_t;
 
 typedef struct {
 	char *name;
@@ -77,7 +85,7 @@ typedef struct {
 	int n_submodules;
 	char **gates;
 	int n_gates;
-	char **connections;
+	connection_t *connections;
 	int n_connections;
 } module_t;
 
