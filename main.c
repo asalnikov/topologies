@@ -19,8 +19,6 @@
  * nested loops
  * param vectors
  * compact network form
- * gate existence check
- * check if gate's already connected
  * rewrite malloc
  */
 
@@ -113,15 +111,15 @@ graph_add_edge_ptr (node_t *node_a, node_t *node_b)
 }
 
 static void
-graph_add_edge_name (graph_t *g, char *name_a, char *name_b, node_type type)
+graph_add_edge_name (graph_t *g, char *name_a, char *name_b)
 {
 	node_t *node_a, *node_b;
 	node_a = graph_find_node(g, name_a);
 	node_b = graph_find_node(g, name_b);
 	if (node_a == NULL)
-		node_a = graph_add_node(g, name_a, type);
+		error("no such node: %s\n", name_a);
 	if (node_b == NULL)
-		node_b = graph_add_node(g, name_b, type);
+		error("no such node: %s\n", name_b);
 	graph_add_edge_ptr(node_a, node_b);
 }
 
@@ -438,7 +436,7 @@ graph_eval_and_add_edge (graph_t *g, param_stack_t *p,
 		error("could not evaluate %s\n", r_name_b);
 	char *full_name_a = get_full_name(stack, name_a, -1);
 	char *full_name_b = get_full_name(stack, name_b, -1);
-	graph_add_edge_name(g, full_name_a, full_name_b, NODE_GATE);
+	graph_add_edge_name(g, full_name_a, full_name_b);
 	free(full_name_a);
 	free(full_name_b);
 	free(name_a);
@@ -472,16 +470,18 @@ expand_module (graph_t *g, module_t *module, network_definition_t *net,
 			if (size == 0) {
 				full_name = get_full_name(stack,
 					module->gates[i].name, -1);
-				graph_add_edge_name(g, full_name, name_s, NODE_GATE);
+				graph_add_node(g, full_name, NODE_GATE);
+				graph_add_edge_name(g, full_name, name_s);
+				free(full_name);
 			} else {
 				for (int j = 0; j < size; j++) {
 					full_name = get_full_name(stack,
 						module->gates[i].name, j);
-					graph_add_edge_name(g, full_name,
-						name_s, NODE_GATE);
+					graph_add_node(g, full_name, NODE_GATE);
+					graph_add_edge_name(g, full_name, name_s);
+					free(full_name);
 				}
 			}
-			free(full_name);
 		}
 		free(name_s);
 	} else {
@@ -567,14 +567,20 @@ graph_gate_neighbors (node_t *gate, node_t **node_1, node_t **node_2)
 {
 	node_list_t *l = gate->adj;
 	*node_1 = NULL;
+	*node_2 = NULL;
 	while (l != NULL) {
 		if (*node_1 == NULL) {
 			*node_1 = l->node;
-		} else {
+		} else if (*node_2 == NULL) {
 			*node_2 = l->node;
+		} else {
+			error("gate %s is connected more than two times",
+				gate->name);
 		}
 		l = l->next;
 	}
+	if ((*node_1 == NULL) || (*node_2 == NULL))
+		error("gate %s is connected less than two times", gate->name);
 }
 
 static void
@@ -653,6 +659,53 @@ graph_compact (graph_t *g)
 	}
 }
 
+static void
+network_destroy (network_definition_t *n)
+{
+	for (int i = 0; i < n->n_modules; i++) {
+		for (int j = 0; j < n->modules[i].n_params; j++) {
+			free(n->modules[i].params[j].name);
+			free(n->modules[i].params[j].value);
+		}
+		free(n->modules[i].params);
+		for (int j = 0; j < n->modules[i].n_submodules; j++) {
+			free(n->modules[i].submodules[j].name);
+			free(n->modules[i].submodules[j].module);
+			free(n->modules[i].submodules[j].size);
+			for (int k = 0; 
+			     k < n->modules[i].submodules[j].n_params;
+			     k++)
+			{
+				free(n->modules[i].submodules[j].params[k].name);
+				free(n->modules[i].submodules[j].params[k].value);
+			}
+			free(n->modules[i].submodules[j].params);
+		}
+		free(n->modules[i].submodules);
+		for (int j = 0; j < n->modules[i].n_gates; j++) {
+			free(n->modules[i].gates[j].name);
+			free(n->modules[i].gates[j].size);
+		}
+		free(n->modules[i].gates);
+		for (int j = 0; j < n->modules[i].n_connections; j++) {
+			free(n->modules[i].connections[j].from);
+			free(n->modules[i].connections[j].to);
+			free(n->modules[i].connections[j].loop);
+			free(n->modules[i].connections[j].start);
+			free(n->modules[i].connections[j].end);
+		}
+		free(n->modules[i].connections);
+		free(n->modules[i].name);
+	}
+	free(n->modules);
+	for (int i = 0; i < n->network->n_params; i++) {
+		free(n->network->params[i].name);
+		free(n->network->params[i].value);
+	}
+	free(n->network->module);
+	free(n->network);
+}
+
 int
 main (int argc, char *argv[])
 {
@@ -669,6 +722,8 @@ main (int argc, char *argv[])
 	graph_compact(gg);
 	graph_print(gg, stdout, false);
 	graph_destroy(gg);
+
+	network_destroy(&network_definition);
 
 	exit(EXIT_SUCCESS);
 }
