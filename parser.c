@@ -292,6 +292,7 @@ json_deserialize (jsmntok_t *tokens, int n_tokens, char *text,
 				bad_token(i, tokens[i].type, tokens[i].start,
 				         text, state);
 			}
+
 		} else if (state == STATE_MODULE_PARAMS) {
 			array_n = tokens[i].size;
 			if (modules[modules_i].params != NULL)
@@ -401,6 +402,9 @@ json_deserialize (jsmntok_t *tokens, int n_tokens, char *text,
 				             &modules[modules_i].connections[array_i].loop);
 				subobject_i += 1;
 				i += 2;
+			} else {
+				bad_token(i, tokens[i].type, tokens[i].start,
+				         text, state);
 			}
 		} else if (state == STATE_MODULE_SUBMODULE) {
 			if (subobject_i == subobject_n) {
@@ -437,6 +441,9 @@ json_deserialize (jsmntok_t *tokens, int n_tokens, char *text,
 					bad_token(i, tokens[i].type,
 					          tokens[i].start, text, state);
 				state = STATE_MODULE_SUBMODULE_PARAMS;
+			} else {
+				bad_token(i, tokens[i].type, tokens[i].start,
+				         text, state);
 			}
 		} else if (state == STATE_MODULE_SUBMODULE_PARAMS) {
 			subarray_n = tokens[i].size;
@@ -494,6 +501,9 @@ json_deserialize (jsmntok_t *tokens, int n_tokens, char *text,
 					bad_token(i, tokens[i].type,
 					          tokens[i].start, text, state);
 				state = STATE_NETWORK_PARAMS;
+			} else {
+				bad_token(i, tokens[i].type, tokens[i].start,
+				         text, state);
 			}
 		} else if (state == STATE_NETWORK_PARAMS) {
 			array_n = tokens[i].size;

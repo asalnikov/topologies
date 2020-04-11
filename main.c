@@ -20,8 +20,8 @@
  * param vectors
  * compact network form
  * gate existence check
+ * check if gate's already connected
  * rewrite malloc
- * checks in parser
  */
 
 /* file reading */
@@ -563,17 +563,53 @@ definition_to_graph (network_definition_t *net)
 }
 
 static void
-graph_gate_neighbors (node_t *gate, node_t **n_node, node_t **n_gate)
+graph_gate_neighbors (node_t *gate, node_t **node_1, node_t **node_2)
 {
 	node_list_t *l = gate->adj;
+	*node_1 = NULL;
 	while (l != NULL) {
-		if (l->node->type == NODE_GATE) {
-			*n_gate = l->node;
+		if (*node_1 == NULL) {
+			*node_1 = l->node;
 		} else {
-			*n_node = l->node;
+			*node_2 = l->node;
 		}
 		l = l->next;
 	}
+}
+
+static void
+graph_gate_connects_whom (node_t *gate, node_t **n_node_1, node_t **n_node_2)
+{
+	node_t *node_a, *node_b, *node_ta, *node_tb, *node_prev;
+	gate->type = NODE_GATE_VISITED;
+	graph_gate_neighbors(gate, &node_a, &node_b);
+	node_prev = gate;
+	while (node_a->type != NODE_NODE) {
+		node_a->type = NODE_GATE_VISITED;
+		graph_gate_neighbors(node_a, &node_ta, &node_tb);
+		if (node_ta != node_prev) {
+			node_prev = node_a;
+			node_a = node_ta;
+		} else {
+			node_prev = node_a;
+			node_a = node_tb;
+		}
+	}
+	node_prev = gate;
+	while (node_b->type != NODE_NODE) {
+		node_b->type = NODE_GATE_VISITED;
+		graph_gate_neighbors(node_b, &node_ta, &node_tb);
+		if (node_ta != node_prev) {
+			node_prev = node_b;
+			node_b = node_ta;
+		} else {
+			node_prev = node_b;
+			node_b = node_tb;
+		}
+	}
+
+	*n_node_1 = node_a;
+	*n_node_2 = node_b;
 }
 
 static void
@@ -582,18 +618,17 @@ graph_compact (graph_t *g)
 	node_list_t *l, *l_next;
 	/* connect nodes with nodes */
 	for (int i = 0; i < g->n_nodes; i++) {
-		if (g->nodes[i].type == NODE_NODE) continue;
+		if (g->nodes[i].type != NODE_GATE) continue;
 
-		node_t *n_node_1 = NULL, *n_node_2 = NULL, *n_gate = NULL;
-		graph_gate_neighbors(&g->nodes[i], &n_node_1, &n_gate);
-		graph_gate_neighbors(n_gate, &n_node_2, &n_gate);
+		node_t *n_node_1 = NULL, *n_node_2 = NULL;
+		graph_gate_connects_whom(&g->nodes[i], &n_node_1, &n_node_2);
 
 		if (n_node_1->n > n_node_2->n)
 			graph_add_edge_ptr(n_node_1, n_node_2);
 	}
 	/* disconnect gates */
 	for (int i = 0; i < g->n_nodes; i++) {
-		if (g->nodes[i].type == NODE_GATE) {
+		if (g->nodes[i].type != NODE_NODE) {
 			l = g->nodes[i].adj;
 			while (l != NULL) {
 				l_next = l->next;
@@ -606,7 +641,7 @@ graph_compact (graph_t *g)
 			node_list_t **prev = &g->nodes[i].adj;
 			while (l != NULL) {
 				l_next = l->next;
-				if (l->node->type == NODE_GATE) {
+				if (l->node->type != NODE_NODE) {
 					free(l);
 					*prev = l_next;
 				} else {
