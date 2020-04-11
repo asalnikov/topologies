@@ -16,12 +16,12 @@
 #include "defs.h"
 
 /* TODO
- * gate vectors
  * nested loops
  * param vectors
  * compact network form
  * gate existence check
  * rewrite malloc
+ * checks in parser
  */
 
 /* file reading */
@@ -232,15 +232,23 @@ name_stack_name (name_stack_t *s)
 }
 
 static char *
-get_full_name (name_stack_t *s, char *name)
+get_full_name (name_stack_t *s, char *name, int index)
 {
+	int added_len = 0;
+	if (index != -1) {
+		added_len = snprintf(0, 0, "[%d]", index);
+	}
 	char *name_s = name_stack_name(s);
 	char *full_name =
-		(char *) malloc(strlen(name) + strlen(name_s) + 2);
+		(char *) malloc(strlen(name) + strlen(name_s) + added_len + 2);
 	strncpy(full_name, name_s, strlen(name_s));
 	full_name[strlen(name_s)] = '.';
 	strncpy(full_name + strlen(name_s) + 1, name,
 	        strlen(name) + 1);
+	if (index != -1) {
+		snprintf(full_name + strlen(name_s) + strlen(name) + 1,
+			added_len + 1, "[%d]", index);
+	}
 	free(name_s);
 	return full_name;
 }
@@ -428,8 +436,8 @@ graph_eval_and_add_edge (graph_t *g, param_stack_t *p,
 		error("could not evaluate %s\n", r_name_a);
 	if (name_b == NULL)
 		error("could not evaluate %s\n", r_name_b);
-	char *full_name_a = get_full_name(stack, name_a);
-	char *full_name_b = get_full_name(stack, name_b);
+	char *full_name_a = get_full_name(stack, name_a, -1);
+	char *full_name_b = get_full_name(stack, name_b, -1);
 	graph_add_edge_name(g, full_name_a, full_name_b, NODE_GATE);
 	free(full_name_a);
 	free(full_name_b);
@@ -455,15 +463,26 @@ expand_module (graph_t *g, module_t *module, network_definition_t *net,
 	}
 	if (module->submodules == NULL) {
 		char *name_s = name_stack_name(stack);
+		char *full_name;
 		graph_add_node(g, name_s, NODE_NODE);
 		for (int i = 0; i < module->n_gates; i++) {
-			char *full_name = get_full_name(stack, module->gates[i]);
-			graph_add_edge_name(g, full_name, name_s, NODE_GATE);
+			full_name = NULL;
+			int size = lrint(param_stack_eval(p,
+				module->gates[i].size));
+			if (size == 0) {
+				full_name = get_full_name(stack,
+					module->gates[i].name, -1);
+				graph_add_edge_name(g, full_name, name_s, NODE_GATE);
+			} else {
+				for (int j = 0; j < size; j++) {
+					full_name = get_full_name(stack,
+						module->gates[i].name, j);
+					graph_add_edge_name(g, full_name,
+						name_s, NODE_GATE);
+				}
+			}
 			free(full_name);
 		}
-		/* printf("%s ", name_s);
-		 param_stack_print (p, stdout);
-		printf("\n"); */
 		free(name_s);
 	} else {
 		for (int i = 0; i < module->n_submodules; i++) {
