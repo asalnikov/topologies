@@ -15,6 +15,15 @@
 #include "parser.h"
 #include "defs.h"
 
+/* TODO
+ * gate vectors
+ * nested loops
+ * param vectors
+ * compact network form
+ * gate existence check
+ * rewrite malloc
+ */
+
 /* file reading */
 
 static void
@@ -67,7 +76,8 @@ graph_add_node (graph_t *g, char *name, node_type type)
 	int i = g->n_nodes;
 	if (g->n_nodes == g->cap_nodes) {
 		g->cap_nodes += GRAPH_BLK_SIZE;
-		g->nodes = (node_t *) realloc(g->nodes, g->cap_nodes * sizeof(node_t));
+		g->nodes = (node_t *) realloc(g->nodes,
+			g->cap_nodes * sizeof(node_t));
 	}
 	g->nodes[i].name = (char *) malloc(strlen(name) + 1);
 	strncpy(g->nodes[i].name, name, strlen(name) + 1);
@@ -88,15 +98,10 @@ graph_find_node (graph_t *g, char *name)
 }
 
 static void
-graph_add_edge (graph_t *g, char *name_a, char *name_b, node_type type)
+graph_add_edge_ptr (node_t *node_a, node_t *node_b)
 {
-	node_t *node_a, *node_b;
-	node_a = graph_find_node(g, name_a);
-	node_b = graph_find_node(g, name_b);
-	if (node_a == NULL)
-		node_a = graph_add_node(g, name_a, type);
-	if (node_b == NULL)
-		node_b = graph_add_node(g, name_b, type);
+	if ((node_a == NULL) || (node_b == NULL))
+		error("cannot connect to NULL\n");
 	node_list_t *l = (node_list_t *) malloc(sizeof(node_list_t));
 	l->next = node_a->adj;
 	l->node = node_b;
@@ -108,21 +113,35 @@ graph_add_edge (graph_t *g, char *name_a, char *name_b, node_type type)
 }
 
 static void
-graph_print (graph_t *g, FILE *stream)
+graph_add_edge_name (graph_t *g, char *name_a, char *name_b, node_type type)
 {
-	node_list_t *l, *l_next;
+	node_t *node_a, *node_b;
+	node_a = graph_find_node(g, name_a);
+	node_b = graph_find_node(g, name_b);
+	if (node_a == NULL)
+		node_a = graph_add_node(g, name_a, type);
+	if (node_b == NULL)
+		node_b = graph_add_node(g, name_b, type);
+	graph_add_edge_ptr(node_a, node_b);
+}
+
+static void
+graph_print (graph_t *g, FILE *stream, bool print_gate_nodes)
+{
+	node_list_t *l;
 	fprintf(stream, "graph g {\n");
 	for (int i = 0; i < g->n_nodes; i++) {
-		fprintf(stream, "n%d [label=\"%s\"];\n", i, g->nodes[i].name);
+		if ((g->nodes[i].type == NODE_NODE) || print_gate_nodes)
+			fprintf(stream, "n%d [label=\"%s\"];\n",
+			        i, g->nodes[i].name);
 	}
 	for (int i = 0; i < g->n_nodes; i++) {
 		l = g->nodes[i].adj;
 		while (l != NULL) {
-			l_next = l->next;
 				if (i < l->node->n)
 					fprintf(stream, "n%d -- n%d;\n",
 					        i, l->node->n);
-			l = l_next;
+			l = l->next;
 		}
 	}
 	fprintf(stream, "}\n");
@@ -257,8 +276,8 @@ param_stack_to_te_vars (param_stack_t *p, te_variable **vars)
 		bool is_present = false;
 		int param_name_len = strlen(p->params[i].name);
 		for (int j = 0; j < te_vars_n; j++) {
-			if (strncmp(p->params[i].name, (*vars)[j].name, param_name_len)
-				== 0)
+			if (strncmp(p->params[i].name, (*vars)[j].name,
+				param_name_len) == 0)
 			{
 				is_present = true;
 				break;
@@ -302,7 +321,8 @@ param_stack_enter (param_stack_t *p, raw_param_t *r)
 {
 	if (p->n == p->cap) {
 		p->cap += PARAM_BLK_SIZE;
-		p->params = (param_t *) realloc(p->params, p->cap * sizeof(param_t));
+		p->params = (param_t *) realloc(p->params,
+			p->cap * sizeof(param_t));
 	}
 
 	/* param stack's lifetime is contained in raw params' lifetime */
@@ -316,7 +336,8 @@ param_stack_enter_val (param_stack_t *p, char *name, int d)
 {
 	if (p->n == p->cap) {
 		p->cap += PARAM_BLK_SIZE;
-		p->params = (param_t *) realloc(p->params, p->cap * sizeof(param_t));
+		p->params = (param_t *) realloc(p->params,
+			p->cap * sizeof(param_t));
 	}
 
 	/* param stack's lifetime is contained in name's lifetime */
@@ -336,7 +357,8 @@ param_stack_destroy (param_stack_t *p)
 param_stack_print (param_stack_t *p, FILE *stream)
 {
 	for (int i = 0; i < p->n; i++) {
-		fprintf(stream, "%s = %f, ", p->params[i].name, p->params[i].value);
+		fprintf(stream, "%s = %f, ", p->params[i].name,
+			p->params[i].value);
 	}
 } */
 
@@ -380,7 +402,8 @@ eval_conn_name (param_stack_t *p, char *name)
 	while ((left = strchr(left, '[')) != NULL) {
 		strncpy(t, prev, left - prev + 1);
 		t += left - prev + 1;
-		t += snprintf(t, res_str + len + added_len - t, "%d]", eval_res[i]);
+		t += snprintf(t, res_str + len + added_len - t, "%d]",
+			eval_res[i]);
 		left = strchr(left, ']');
 		prev = left + 1;
 		i++;
@@ -391,6 +414,28 @@ eval_conn_name (param_stack_t *p, char *name)
 }
 
 /* module to graph conversion */
+
+static void
+graph_eval_and_add_edge (graph_t *g, param_stack_t *p,
+                         name_stack_t *stack,
+                         connection_t *conn)
+{
+	char *r_name_a = conn->from;
+	char *r_name_b = conn->to;
+	char *name_a = eval_conn_name(p, r_name_a);
+	char *name_b = eval_conn_name(p, r_name_b);
+	if (name_a == NULL)
+		error("could not evaluate %s\n", r_name_a);
+	if (name_b == NULL)
+		error("could not evaluate %s\n", r_name_b);
+	char *full_name_a = get_full_name(stack, name_a);
+	char *full_name_b = get_full_name(stack, name_b);
+	graph_add_edge_name(g, full_name_a, full_name_b, NODE_GATE);
+	free(full_name_a);
+	free(full_name_b);
+	free(name_a);
+	free(name_b);
+}
 
 static module_t *
 find_module (network_definition_t *net, char *name)
@@ -413,7 +458,7 @@ expand_module (graph_t *g, module_t *module, network_definition_t *net,
 		graph_add_node(g, name_s, NODE_NODE);
 		for (int i = 0; i < module->n_gates; i++) {
 			char *full_name = get_full_name(stack, module->gates[i]);
-			graph_add_edge(g, full_name, name_s, NODE_GATE);
+			graph_add_edge_name(g, full_name, name_s, NODE_GATE);
 			free(full_name);
 		}
 		/* printf("%s ", name_s);
@@ -436,7 +481,7 @@ expand_module (graph_t *g, module_t *module, network_definition_t *net,
 				for (int j = 0; j < size; j++) {
 					name_stack_enter(stack, smodule.name, j);
 					module_t *module = find_module(net,
-								       smodule.module);
+					                               smodule.module);
 					expand_module(g, module, net, stack, p);
 					name_stack_leave(stack);
 				}
@@ -462,39 +507,13 @@ expand_module (graph_t *g, module_t *module, network_definition_t *net,
 				for (int j = start; j <= end; j++) {
 					param_stack_enter_val(p,
 						module->connections[i].loop, j);
-					char *r_name_a = module->connections[i].from;
-					char *r_name_b = module->connections[i].to;
-					char *name_a = eval_conn_name(p, r_name_a);
-					char *name_b = eval_conn_name(p, r_name_b);
-					if (name_a == NULL)
-						error("could not evaluate %s\n", r_name_a);
-					if (name_b == NULL)
-						error("could not evaluate %s\n", r_name_b);
-					char *full_name_a = get_full_name(stack, name_a);
-					char *full_name_b = get_full_name(stack, name_b);
-					graph_add_edge(g, full_name_a, full_name_b, NODE_GATE);
-					free(full_name_a);
-					free(full_name_b);
-					free(name_a);
-					free(name_b);
+					graph_eval_and_add_edge(g, p, stack,
+						&module->connections[i]);
 					param_stack_leave(p);
 				}
 			} else {
-				char *r_name_a = module->connections[i].from;
-				char *r_name_b = module->connections[i].to;
-				char *name_a = eval_conn_name(p, r_name_a);
-				char *name_b = eval_conn_name(p, r_name_b);
-				if (name_a == NULL)
-					error("could not evaluate %s\n", r_name_a);
-				if (name_b == NULL)
-					error("could not evaluate %s\n", r_name_b);
-				char *full_name_a = get_full_name(stack, name_a);
-				char *full_name_b = get_full_name(stack, name_b);
-				graph_add_edge(g, full_name_a, full_name_b, NODE_GATE);
-				free(full_name_a);
-				free(full_name_b);
-				free(name_a);
-				free(name_b);
+				graph_eval_and_add_edge(g, p, stack,
+					&module->connections[i]);
 			}
 		}
 	}
@@ -524,6 +543,61 @@ definition_to_graph (network_definition_t *net)
 	return g;
 }
 
+static void
+graph_gate_neighbors (node_t *gate, node_t **n_node, node_t **n_gate)
+{
+	node_list_t *l = gate->adj;
+	while (l != NULL) {
+		if (l->node->type == NODE_GATE) {
+			*n_gate = l->node;
+		} else {
+			*n_node = l->node;
+		}
+		l = l->next;
+	}
+}
+
+static void
+graph_compact (graph_t *g)
+{
+	node_list_t *l, *l_next;
+	/* connect nodes with nodes */
+	for (int i = 0; i < g->n_nodes; i++) {
+		if (g->nodes[i].type == NODE_NODE) continue;
+
+		node_t *n_node_1 = NULL, *n_node_2 = NULL, *n_gate = NULL;
+		graph_gate_neighbors(&g->nodes[i], &n_node_1, &n_gate);
+		graph_gate_neighbors(n_gate, &n_node_2, &n_gate);
+
+		if (n_node_1->n > n_node_2->n)
+			graph_add_edge_ptr(n_node_1, n_node_2);
+	}
+	/* disconnect gates */
+	for (int i = 0; i < g->n_nodes; i++) {
+		if (g->nodes[i].type == NODE_GATE) {
+			l = g->nodes[i].adj;
+			while (l != NULL) {
+				l_next = l->next;
+				free(l);
+				l = l_next;
+			}
+			g->nodes[i].adj = NULL;
+		} else {
+			l = g->nodes[i].adj;
+			node_list_t **prev = &g->nodes[i].adj;
+			while (l != NULL) {
+				l_next = l->next;
+				if (l->node->type == NODE_GATE) {
+					free(l);
+					*prev = l_next;
+				} else {
+					prev = &l->next;
+				}
+				l = l_next;
+			}
+		}
+	}
+}
 
 int
 main (int argc, char *argv[])
@@ -537,7 +611,9 @@ main (int argc, char *argv[])
 		error("%s: invalid JSON data: %d\n", argv[1], res);
 
 	graph_t *gg = definition_to_graph(&network_definition);
-	graph_print(gg, stdout);
+	graph_print(gg, stdout, true);
+	graph_compact(gg);
+	graph_print(gg, stdout, false);
 	graph_destroy(gg);
 
 	exit(EXIT_SUCCESS);
