@@ -579,8 +579,10 @@ graph_gate_neighbors (node_t *gate, node_t **node_1, node_t **node_2)
 		}
 		l = l->next;
 	}
+	/*
 	if ((*node_1 == NULL) || (*node_2 == NULL))
 		error("gate %s is connected less than two times", gate->name);
+	*/
 }
 
 static void
@@ -589,28 +591,34 @@ graph_gate_connects_whom (node_t *gate, node_t **n_node_1, node_t **n_node_2)
 	node_t *node_a, *node_b, *node_ta, *node_tb, *node_prev;
 	gate->type = NODE_GATE_VISITED;
 	graph_gate_neighbors(gate, &node_a, &node_b);
-	node_prev = gate;
-	while (node_a->type != NODE_NODE) {
-		node_a->type = NODE_GATE_VISITED;
-		graph_gate_neighbors(node_a, &node_ta, &node_tb);
-		if (node_ta != node_prev) {
-			node_prev = node_a;
-			node_a = node_ta;
-		} else {
-			node_prev = node_a;
-			node_a = node_tb;
+	if (node_a != NULL) {
+		node_prev = gate;
+		while (node_a->type != NODE_NODE) {
+			node_a->type = NODE_GATE_VISITED;
+			graph_gate_neighbors(node_a, &node_ta, &node_tb);
+			if ((node_ta == NULL) || (node_tb == NULL)) break;
+			if (node_ta != node_prev) {
+				node_prev = node_a;
+				node_a = node_ta;
+			} else {
+				node_prev = node_a;
+				node_a = node_tb;
+			}
 		}
 	}
-	node_prev = gate;
-	while (node_b->type != NODE_NODE) {
-		node_b->type = NODE_GATE_VISITED;
-		graph_gate_neighbors(node_b, &node_ta, &node_tb);
-		if (node_ta != node_prev) {
-			node_prev = node_b;
-			node_b = node_ta;
-		} else {
-			node_prev = node_b;
-			node_b = node_tb;
+	if (node_b != NULL) {
+		node_prev = gate;
+		while (node_b->type != NODE_NODE) {
+			node_b->type = NODE_GATE_VISITED;
+			graph_gate_neighbors(node_b, &node_ta, &node_tb);
+			if ((node_ta == NULL) || (node_tb == NULL)) break;
+			if (node_ta != node_prev) {
+				node_prev = node_b;
+				node_b = node_ta;
+			} else {
+				node_prev = node_b;
+				node_b = node_tb;
+			}
 		}
 	}
 
@@ -629,8 +637,11 @@ graph_compact (graph_t *g)
 		node_t *n_node_1 = NULL, *n_node_2 = NULL;
 		graph_gate_connects_whom(&g->nodes[i], &n_node_1, &n_node_2);
 
-		if (n_node_1->n > n_node_2->n)
+		if ((n_node_1 != NULL) && (n_node_2 != NULL) &&
+			(n_node_1->n > n_node_2->n))
+		{
 			graph_add_edge_ptr(n_node_1, n_node_2);
+		}
 	}
 	/* disconnect gates */
 	for (int i = 0; i < g->n_nodes; i++) {

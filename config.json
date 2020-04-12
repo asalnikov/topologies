@@ -1,12 +1,6 @@
 [
 { "module":
 	{ "name": "simple",
-	  "params": [
-		{"x": "3"},
-		{"y": "1"}
-	  ],
-	  "submodules": [],
-	  "connections": [],
 	  "gates": [
 		{ "gate": "2" }
 	  ]
@@ -31,17 +25,9 @@
 			"loop": "i",
 			"start": "0",
 			"end": "1",
-			"from": "simplevec[2*i].gate[0]",
-			"to": "simplevec[2*i+1].gate[0]"
-		},
-		{
-			"loop": "i",
-			"start": "0",
-			"end": "1",
-			"from": "simplevec[i].gate[1]",
-			"to": "simplevec[i + 2].gate[1]"
-		}
-	  ],
+			"from": "simplevec[2*i].gate[i]",
+			"to": "simplevec[2*i+1].gate[i]"
+		}	  ],
 	  "gates": [
 	  	{ "out": "2" }
 	  ]
