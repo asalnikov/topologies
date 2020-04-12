@@ -19,13 +19,10 @@
 #include "defs.h"
 
 /* TODO
- * nested loops
  * param vectors
  * compact network form
  * rewrite malloc
  */
-
-/* file reading */
 
 static void
 error (const char * errmsg, ...)
@@ -58,8 +55,6 @@ read_file (int argc, char *argv[], char **addr)
 	close(fd);
 	return st.st_size;
 }
-
-/* module to graph conversion */
 
 static void
 graph_eval_and_add_edge (graph_t *g, param_stack_t *p,
@@ -370,6 +365,23 @@ graph_compact (graph_t *g)
 }
 
 static void
+free_connection (connection_wrapper_t *c)
+{
+	if (c->type == CONN_HAS_CONN) {
+		free(c->ptr.conn->from);
+		free(c->ptr.conn->to);
+		free(c->ptr.conn);
+	} else {
+		free_connection(c->ptr.loop->conn);
+		free(c->ptr.loop->conn);
+		free(c->ptr.loop->loop);
+		free(c->ptr.loop->start);
+		free(c->ptr.loop->end);
+		free(c->ptr.loop);
+	}
+}
+
+static void
 network_destroy (network_definition_t *n)
 {
 	for (int i = 0; i < n->n_modules; i++) {
@@ -397,17 +409,10 @@ network_destroy (network_definition_t *n)
 			free(n->modules[i].gates[j].size);
 		}
 		free(n->modules[i].gates);
-		/*
 		for (int j = 0; j < n->modules[i].n_connections; j++) {
-			free(n->modules[i].connections[j].from);
-			free(n->modules[i].connections[j].to);
-			free(n->modules[i].connections[j].loop);
-			free(n->modules[i].connections[j].start);
-			free(n->modules[i].connections[j].end);
+			free_connection(&n->modules[i].connections[j]);
 		}
 		free(n->modules[i].connections);
-		TODO
-		*/
 		free(n->modules[i].name);
 	}
 	free(n->modules);
