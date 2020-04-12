@@ -13,6 +13,8 @@
 #include "tinyexpr.h"
 
 #include "parser.h"
+#include "name_stack.h"
+#include "param_stack.h"
 #include "graph.h"
 #include "defs.h"
 
@@ -55,263 +57,6 @@ read_file (int argc, char *argv[], char **addr)
 
 	close(fd);
 	return st.st_size;
-}
-
-/* name stack */
-
-static name_stack_t *
-name_stack_create (char *name)
-{
-	name_stack_t *s = (name_stack_t *) malloc(sizeof(name_stack_t));
-	s->next = NULL;
-	s->name = (char *) malloc(strlen(name) + 1);
-	strncpy(s->name, name, strlen(name) + 1);
-	return s;
-}
-
-static void
-name_stack_enter (name_stack_t *s, char *name, int index)
-{
-	int len;
-	name_stack_t *head = s;
-	while (head->next != NULL)
-		head = head->next;
-	head->next = (name_stack_t *) malloc(sizeof(name_stack_t));
-	head = head->next;
-	head->next = NULL;
-	if (index < 0) {
-		len = strlen(name) + 1;
-		head->name = (char *) malloc(len);
-		strncpy(s->name, name, len);
-	} else {
-		len = snprintf(0, 0, "%s[%d]", name, index) + 1;
-		head->name = (char *) malloc(len);
-		snprintf(head->name, len, "%s[%d]", name, index);
-	}
-}
-
-static void
-name_stack_leave (name_stack_t *s)
-{
-	name_stack_t *head = s;
-	if (head->next == NULL)
-		return;
-	while (head->next->next != NULL)
-		head = head->next;
-	free(head->next->name);
-	free(head->next);
-	head->next = NULL;
-}
-
-static char *
-name_stack_name (name_stack_t *s)
-{
-	unsigned len = 0, off = 0;
-	name_stack_t *head = s;
-	while (head->next != NULL) {
-		len += strlen(head->name) + 1;
-		head = head->next;
-	}
-	len += strlen(head->name) + 1;
-	char *name = (char *) malloc(len);
-	head = s;
-	while (head->next != NULL) {
-		snprintf(name + off, strlen(head->name) + 2, "%s.", head->name);
-		off += strlen(head->name) + 1;
-		head = head->next;
-	}
-	snprintf(name + off, strlen(head->name) + 2, "%s", head->name);
-	return name;
-}
-
-static char *
-get_full_name (name_stack_t *s, char *name, int index)
-{
-	int added_len = 0;
-	if (index != -1) {
-		added_len = snprintf(0, 0, "[%d]", index);
-	}
-	char *name_s = name_stack_name(s);
-	char *full_name =
-		(char *) malloc(strlen(name) + strlen(name_s) + added_len + 2);
-	strncpy(full_name, name_s, strlen(name_s));
-	full_name[strlen(name_s)] = '.';
-	strncpy(full_name + strlen(name_s) + 1, name,
-	        strlen(name) + 1);
-	if (index != -1) {
-		snprintf(full_name + strlen(name_s) + strlen(name) + 1,
-			added_len + 1, "[%d]", index);
-	}
-	free(name_s);
-	return full_name;
-}
-
-/* param stack */
-
-static param_stack_t *
-param_stack_create (void)
-{
-	param_stack_t *p = (param_stack_t *) malloc(sizeof(param_stack_t));
-	p->n = 0;
-	p->cap = PARAM_BLK_SIZE;
-	p->params = (param_t *) calloc(p->cap, sizeof(param_t));
-	return p;
-}
-
-static void
-param_stack_leave (param_stack_t *p)
-{
-	p->n--;
-}
-
-static int
-param_stack_to_te_vars (param_stack_t *p, te_variable **vars)
-{
-	int VARS_BLK_SIZE = 32;
-	int te_vars_n = 0;
-	int te_vars_cap = VARS_BLK_SIZE;
-	*vars = (te_variable *) calloc(te_vars_cap, sizeof(te_variable));
-
-	/* add starting from the tail -- from the most recent */
-	for (int i = p->n - 1; i >= 0; i--) {
-		bool is_present = false;
-		int param_name_len = strlen(p->params[i].name);
-		for (int j = 0; j < te_vars_n; j++) {
-			if (strncmp(p->params[i].name, (*vars)[j].name,
-				param_name_len) == 0)
-			{
-				is_present = true;
-				break;
-			}
-		}
-		if (is_present) {
-			continue;
-		}
-		if (te_vars_n == te_vars_cap) {
-			te_vars_cap += VARS_BLK_SIZE;
-			*vars = (te_variable *) realloc(*vars,
-				te_vars_cap * sizeof(te_variable));
-		}
-		(*vars)[te_vars_n].name = p->params[i].name;
-		(*vars)[te_vars_n].address = &p->params[i].value;
-		te_vars_n++;
-	}
-
-	return te_vars_n;
-}
-
-static double
-param_stack_eval (param_stack_t *p, char *value)
-{
-	te_variable *vars = NULL;
-	int vars_n = param_stack_to_te_vars(p, &vars);
-	int err;
-	te_expr *e = te_compile(value, vars, vars_n, &err);
-	if (e == NULL) {
-		error("could not evaluate %s (error near %d)\n", value, err);
-		return 0.0;
-	}
-	double res = te_eval(e);
-	te_free(e);
-	free(vars);
-	return res;
-}
-
-static void
-param_stack_enter (param_stack_t *p, raw_param_t *r)
-{
-	if (p->n == p->cap) {
-		p->cap += PARAM_BLK_SIZE;
-		p->params = (param_t *) realloc(p->params,
-			p->cap * sizeof(param_t));
-	}
-
-	/* param stack's lifetime is contained in raw params' lifetime */
-	p->params[p->n].name = r->name;
-	p->params[p->n].value = param_stack_eval(p, r->value);
-	p->n++;
-}
-
-static void
-param_stack_enter_val (param_stack_t *p, char *name, int d)
-{
-	if (p->n == p->cap) {
-		p->cap += PARAM_BLK_SIZE;
-		p->params = (param_t *) realloc(p->params,
-			p->cap * sizeof(param_t));
-	}
-
-	/* param stack's lifetime is contained in name's lifetime */
-	p->params[p->n].name = name;
-	p->params[p->n].value = d;
-	p->n++;
-}
-
-static void
-param_stack_destroy (param_stack_t *p)
-{
-	free(p->params);
-	free(p);
-}
-
-/* static void
-param_stack_print (param_stack_t *p, FILE *stream)
-{
-	for (int i = 0; i < p->n; i++) {
-		fprintf(stream, "%s = %f, ", p->params[i].name,
-			p->params[i].value);
-	}
-} */
-
-static char *
-eval_conn_name (param_stack_t *p, char *name)
-{
-	int len = strlen(name);
-	char *left, *right;
-
-	int n_params = 0;
-	left = name;
-	while ((left = strchr(left, '[')) != NULL) {
-		left++;
-		n_params++;
-	}
-
-	int *eval_res = calloc(n_params, sizeof(int));
-	int i = 0;
-	int added_len = 0;
-
-	left = name;
-	while ((left = strchr(left, '[')) != NULL) {
-		right = strchr(left, ']');
-		if (right == NULL) {
-			free(eval_res);
-			return NULL;
-		}
-		*right = 0;
-		left++;	
-		eval_res[i] = lrint(param_stack_eval(p, left));
-		*right = ']';
-		added_len += snprintf(0, 0, "%d", eval_res[i]);
-		i++;
-	}
-
-	char *res_str = calloc(len + added_len + 1, sizeof(char));
-	char *t = res_str;
-	left = name;
-	char *prev = left;
-	i = 0;
-	while ((left = strchr(left, '[')) != NULL) {
-		strncpy(t, prev, left - prev + 1);
-		t += left - prev + 1;
-		t += snprintf(t, res_str + len + added_len - t, "%d]",
-			eval_res[i]);
-		left = strchr(left, ']');
-		prev = left + 1;
-		i++;
-	}
-	strcpy(t, prev);
-	free(eval_res);
-	return res_str;
 }
 
 /* module to graph conversion */
@@ -386,13 +131,19 @@ expand_module (graph_t *g, module_t *module, network_definition_t *net,
                name_stack_t *stack, param_stack_t *p)
 {
 	for (int i = 0; i < module->n_params; i++) {
-		param_stack_enter(p, &module->params[i]);
+		if (param_stack_enter(p, &module->params[i]) < 0) {
+			error("could not evaluate %s\n", module->params[i].value);
+		}
 	}
 	if (module->submodules == NULL) {
 		char *name_s = name_stack_name(stack);
 		graph_add_node(g, name_s, NODE_NODE);
 		for (int i = 0; i < module->n_gates; i++) {
-			int size = lrint(param_stack_eval(p, module->gates[i].size));
+			double size_d;
+			if (param_stack_eval(p, module->gates[i].size, &size_d) < 0) {
+				error("could not evaluate %s\n", module->gates[i].size);
+			}
+			int size = lrint(size_d);
 			if (size == 0) {
 				add_gate(g, stack, name_s, &module->gates[i], -1);
 			} else {
@@ -406,7 +157,9 @@ expand_module (graph_t *g, module_t *module, network_definition_t *net,
 		for (int i = 0; i < module->n_submodules; i++) {
 			submodule_t smodule = module->submodules[i];
 			for (int i = 0; i < smodule.n_params; i++) {
-				param_stack_enter(p, &smodule.params[i]);
+				if (param_stack_enter(p, &smodule.params[i]) < 0) {
+					error("could not evaluate %s\n", smodule.params[i].value);
+				}
 			}
 			int size;
 			if (smodule.size == NULL) {
@@ -429,10 +182,15 @@ expand_module (graph_t *g, module_t *module, network_definition_t *net,
 		}
 		for (int i = 0; i < module->n_connections; i++) {
 			if (module->connections[i].loop != NULL) {
-				int start = lrint(param_stack_eval(p,
-					module->connections[i].start));
-				int end = lrint(param_stack_eval(p,
-					module->connections[i].end));
+				double tmp_d;
+				if (param_stack_eval(p, module->connections[i].start, &tmp_d) < 0) {
+					error("could not evaluate %s\n", module->connections[i].start);
+				}
+				int start = lrint(tmp_d);
+				if (param_stack_eval(p, module->connections[i].end, &tmp_d) < 0) {
+					error("could not evaluate %s\n", module->connections[i].end);
+				}
+				int end = lrint(tmp_d);
 				if (start > end) {
 					error("%d > %d\n", start, end);
 				}
@@ -465,11 +223,12 @@ definition_to_graph (network_definition_t *net)
 	name_stack_t *stack = name_stack_create("network");
 	param_stack_t *p = param_stack_create();
 	for (int i = 0; i < net->network->n_params; i++) {
-		param_stack_enter(p, &net->network->params[i]);
+		if (param_stack_enter(p, &net->network->params[i]) < 0) {
+			error("could not evaluate %s\n", net->network->params[i].value);
+		}
 	}
 	expand_module(g, root_module, net, stack, p);
 	for (int i = 0; i < net->network->n_params; i++) {
-		/* not required */
 		param_stack_leave(p);
 	}
 	param_stack_destroy(p);
