@@ -143,6 +143,88 @@ bad_token (int i, int type, int start_pos, char *text, state_t state)
 }
 
 static void
+parse_connection (int subobject_n, jsmntok_t *tokens, char *text,
+                  connection_wrapper_t *connection, int *i)
+{
+	/* at the start, i points at the outermost object */
+	int state = STATE_MODULE_CONNECTION;
+	if ((subobject_n != 2) && (subobject_n != 4)) {
+		bad_token(*i, tokens[*i].type, tokens[*i].start, text, state);
+	}
+
+	*i += 1;
+	if (subobject_n == 2) {
+		connection->type = CONN_HAS_CONN;
+		connection->ptr.conn = calloc(1, sizeof(connection_plain_t));
+		for (int subobject_i = 0; subobject_i < subobject_n; subobject_i++) {
+			if (json_str_eq(text, &tokens[*i], "from")) {
+				if (connection->ptr.conn->from != NULL)
+					bad_token(*i, tokens[*i].type,
+						  tokens[*i].start, text, state);
+				json_str_cpy(text, &tokens[*i + 1],
+					     &connection->ptr.conn->from);
+				*i += 2;
+			} else if (json_str_eq(text, &tokens[*i], "to")) {
+				if (connection->ptr.conn->to != NULL)
+					bad_token(*i, tokens[*i].type,
+						  tokens[*i].start, text, state);
+				json_str_cpy(text, &tokens[*i + 1],
+					     &connection->ptr.conn->to);
+				*i += 2;
+			} else {
+				bad_token(*i, tokens[*i].type, tokens[*i].start,
+					 text, state);
+			}
+		}
+	} else if (subobject_n == 4) {
+		connection->type = CONN_HAS_LOOP;
+		connection->ptr.loop = calloc(1, sizeof(connection_loop_t));
+		for (int subobject_i = 0; subobject_i < subobject_n; subobject_i++) {
+			if (json_str_eq(text, &tokens[*i], "start")) {
+				if (connection->ptr.loop->start != NULL)
+					bad_token(*i, tokens[*i].type,
+						  tokens[*i].start, text, state);
+				json_str_cpy(text, &tokens[*i + 1],
+					     &connection->ptr.loop->start);
+				*i += 2;
+			} else if (json_str_eq(text, &tokens[*i], "end")) {
+				if (connection->ptr.loop->end != NULL)
+					bad_token(*i, tokens[*i].type,
+						  tokens[*i].start, text, state);
+				json_str_cpy(text, &tokens[*i + 1],
+					     &connection->ptr.loop->end);
+				*i += 2;
+			} else if (json_str_eq(text, &tokens[*i], "loop")) {
+				if (connection->ptr.loop->loop != NULL)
+					bad_token(*i, tokens[*i].type,
+						  tokens[*i].start, text, state);
+				json_str_cpy(text, &tokens[*i + 1],
+					     &connection->ptr.loop->loop);
+				*i += 2;
+			} else if (json_str_eq(text, &tokens[*i], "conn")) {
+				*i += 1;
+				if ((tokens[*i].type != JSMN_OBJECT) ||
+				     (connection->ptr.loop->conn != NULL))
+				{
+					printf("###\n");
+					bad_token(*i, tokens[*i].type,
+					          tokens[*i].start,
+					          text, state);
+				}
+				connection->ptr.loop->conn =
+					(connection_wrapper_t *)
+					calloc(1, sizeof(connection_wrapper_t));
+				parse_connection(tokens[*i].size, tokens, text,
+				                 connection->ptr.loop->conn, i);
+			} else {
+				bad_token(*i, tokens[*i].type, tokens[*i].start,
+					 text, state);
+			}
+		}
+	}
+}
+
+static void
 json_deserialize (jsmntok_t *tokens, int n_tokens, char *text,
                   network_definition_t *network_definition)
 {
@@ -263,8 +345,8 @@ json_deserialize (jsmntok_t *tokens, int n_tokens, char *text,
 				array_i = 0;
 				if (array_n > 0)
 					modules[modules_i].connections =
-						(connection_t *) calloc(array_n,
-						sizeof(connection_t));
+						(connection_wrapper_t *) calloc(array_n,
+						sizeof(connection_wrapper_t));
 				modules[modules_i].n_connections = array_n;
 				i += 1;
 				state = STATE_MODULE_CONNECTIONS_BETWEEN;
@@ -341,10 +423,7 @@ json_deserialize (jsmntok_t *tokens, int n_tokens, char *text,
 				bad_token(i, tokens[i].type, tokens[i].start,
 				          text, state);
 			} else {
-				subobject_i = 0;
-				subobject_n = tokens[i].size;
 				state = STATE_MODULE_CONNECTION;
-				i += 1;
 			}
 		} else if (state == STATE_MODULE_SUBMODULES_BETWEEN) {
 			if (array_i == array_n) {
@@ -359,53 +438,14 @@ json_deserialize (jsmntok_t *tokens, int n_tokens, char *text,
 				i += 1;
 			}
 		} else if (state == STATE_MODULE_CONNECTION) {
-			if (subobject_i == subobject_n) {
-				state = STATE_MODULE_CONNECTIONS_BETWEEN;
-				array_i += 1;
-			} else if (json_str_eq(text, &tokens[i], "from")) {
-				if (modules[modules_i].connections[array_i].from != NULL)
-					bad_token(i, tokens[i].type,
-					          tokens[i].start, text, state);
-				json_str_cpy(text, &tokens[i + 1],
-				             &modules[modules_i].connections[array_i].from);
-				subobject_i += 1;
-				i += 2;
-			} else if (json_str_eq(text, &tokens[i], "to")) {
-				if (modules[modules_i].connections[array_i].to != NULL)
-					bad_token(i, tokens[i].type,
-					          tokens[i].start, text, state);
-				json_str_cpy(text, &tokens[i + 1],
-				             &modules[modules_i].connections[array_i].to);
-				subobject_i += 1;
-				i += 2;
-			} else if (json_str_eq(text, &tokens[i], "start")) {
-				if (modules[modules_i].connections[array_i].start != NULL)
-					bad_token(i, tokens[i].type,
-					          tokens[i].start, text, state);
-				json_str_cpy(text, &tokens[i + 1],
-				             &modules[modules_i].connections[array_i].start);
-				subobject_i += 1;
-				i += 2;
-			} else if (json_str_eq(text, &tokens[i], "end")) {
-				if (modules[modules_i].connections[array_i].end != NULL)
-					bad_token(i, tokens[i].type,
-					          tokens[i].start, text, state);
-				json_str_cpy(text, &tokens[i + 1],
-				             &modules[modules_i].connections[array_i].end);
-				subobject_i += 1;
-				i += 2;
-			} else if (json_str_eq(text, &tokens[i], "loop")) {
-				if (modules[modules_i].connections[array_i].loop != NULL)
-					bad_token(i, tokens[i].type,
-					          tokens[i].start, text, state);
-				json_str_cpy(text, &tokens[i + 1],
-				             &modules[modules_i].connections[array_i].loop);
-				subobject_i += 1;
-				i += 2;
-			} else {
-				bad_token(i, tokens[i].type, tokens[i].start,
-				         text, state);
-			}
+			subobject_i = 0;
+			subobject_n = tokens[i].size;
+			parse_connection(subobject_n, tokens, text,
+			                 &modules[modules_i].connections[array_i],
+					 &i);
+			state = STATE_MODULE_CONNECTIONS_BETWEEN;
+			array_i += 1;
+
 		} else if (state == STATE_MODULE_SUBMODULE) {
 			if (subobject_i == subobject_n) {
 				state = STATE_MODULE_SUBMODULES_BETWEEN;

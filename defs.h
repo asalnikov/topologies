@@ -62,13 +62,32 @@ typedef struct {
 	char *value;
 } raw_param_t;
 
+typedef struct connection_wrapper connection_wrapper_t;
+
+typedef enum {
+	CONN_HAS_CONN,
+	CONN_HAS_LOOP
+} connection_type_t;
+
 typedef struct {
-	char *from;
-	char *to;
 	char *loop;
 	char *start;
 	char *end;
-} connection_t;
+	connection_wrapper_t *conn;
+} connection_loop_t;
+
+typedef struct {
+	char *from;
+	char *to;
+} connection_plain_t;
+
+struct connection_wrapper {
+	connection_type_t type;
+	union {
+		connection_plain_t *conn;
+		connection_loop_t *loop;
+	} ptr;
+};
 
 typedef struct {
 	char *name;
@@ -91,7 +110,7 @@ typedef struct {
 	int n_submodules;
 	gate_t *gates;
 	int n_gates;
-	connection_t *connections;
+	connection_wrapper_t *connections;
 	int n_connections;
 } module_t;
 

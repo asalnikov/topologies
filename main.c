@@ -64,10 +64,10 @@ read_file (int argc, char *argv[], char **addr)
 static void
 graph_eval_and_add_edge (graph_t *g, param_stack_t *p,
                          name_stack_t *s,
-                         connection_t *conn)
+                         connection_wrapper_t *conn)
 {
-	char *r_name_a = conn->from;
-	char *r_name_b = conn->to;
+	char *r_name_a = conn->ptr.conn->from;
+	char *r_name_b = conn->ptr.conn->to;
 	char *name_a = eval_conn_name(p, r_name_a);
 	char *name_b = eval_conn_name(p, r_name_b);
 	if (name_a == NULL)
@@ -124,6 +124,37 @@ enter_and_expand_module(network_definition_t *net, graph_t *g,
 	}
 	expand_module(g, module, net, s, p);
 	name_stack_leave(s);
+}
+
+static void
+traverse_and_add_conns(connection_wrapper_t *c, graph_t *g,
+                       param_stack_t *p, name_stack_t *s)
+{
+	if (c->type == CONN_HAS_LOOP) {
+		double tmp_d;
+		if (param_stack_eval(p, c->ptr.loop->start, &tmp_d) < 0)
+		{
+			error("could not evaluate %s\n",
+			      c->ptr.loop->start);
+		}
+		int start = lrint(tmp_d);
+		if (param_stack_eval(p, c->ptr.loop->end, &tmp_d) < 0)
+		{
+			error("could not evaluate %s\n",
+			      c->ptr.loop->end);
+		}
+		int end = lrint(tmp_d);
+		if (start > end) {
+			error("%d > %d\n", start, end);
+		}
+		for (int j = start; j <= end; j++) {
+			param_stack_enter_val(p, c->ptr.loop->loop, j);
+			traverse_and_add_conns(c->ptr.loop->conn, g, p, s);
+			param_stack_leave(p);
+		}
+	} else {
+		graph_eval_and_add_edge(g, p, s, c);
+	}
 }
 
 static void
@@ -204,36 +235,7 @@ expand_module (graph_t *g, module_t *module, network_definition_t *net,
 			}
 		}
 		for (int i = 0; i < module->n_connections; i++) {
-			if (module->connections[i].loop != NULL) {
-				double tmp_d;
-				if (param_stack_eval(p, module->connections[i].start,
-				    &tmp_d) < 0)
-				{
-					error("could not evaluate %s\n",
-					      module->connections[i].start);
-				}
-				int start = lrint(tmp_d);
-				if (param_stack_eval(p, module->connections[i].end,
-				    &tmp_d) < 0)
-				{
-					error("could not evaluate %s\n",
-					      module->connections[i].end);
-				}
-				int end = lrint(tmp_d);
-				if (start > end) {
-					error("%d > %d\n", start, end);
-				}
-				for (int j = start; j <= end; j++) {
-					param_stack_enter_val(p,
-						module->connections[i].loop, j);
-					graph_eval_and_add_edge(g, p, s,
-						&module->connections[i]);
-					param_stack_leave(p);
-				}
-			} else {
-				graph_eval_and_add_edge(g, p, s,
-					&module->connections[i]);
-			}
+			traverse_and_add_conns(&module->connections[i], g, p, s);
 		}
 	}
 	for (int i = 0; i < module->n_params; i++) {
@@ -395,6 +397,7 @@ network_destroy (network_definition_t *n)
 			free(n->modules[i].gates[j].size);
 		}
 		free(n->modules[i].gates);
+		/*
 		for (int j = 0; j < n->modules[i].n_connections; j++) {
 			free(n->modules[i].connections[j].from);
 			free(n->modules[i].connections[j].to);
@@ -403,6 +406,8 @@ network_destroy (network_definition_t *n)
 			free(n->modules[i].connections[j].end);
 		}
 		free(n->modules[i].connections);
+		TODO
+		*/
 		free(n->modules[i].name);
 	}
 	free(n->modules);
