@@ -63,7 +63,7 @@ read_file (int argc, char *argv[], char **addr)
 
 static void
 graph_eval_and_add_edge (graph_t *g, param_stack_t *p,
-                         name_stack_t *stack,
+                         name_stack_t *s,
                          connection_t *conn)
 {
 	char *r_name_a = conn->from;
@@ -74,8 +74,8 @@ graph_eval_and_add_edge (graph_t *g, param_stack_t *p,
 		error("could not evaluate %s\n", r_name_a);
 	if (name_b == NULL)
 		error("could not evaluate %s\n", r_name_b);
-	char *full_name_a = get_full_name(stack, name_a, -1);
-	char *full_name_b = get_full_name(stack, name_b, -1);
+	char *full_name_a = get_full_name(s, name_a, -1);
+	char *full_name_b = get_full_name(s, name_b, -1);
 	if (graph_add_edge_name(g, full_name_a, full_name_b) < 0) {
 		error("could not connect %s and %s\n",
 			full_name_a, full_name_b);
@@ -96,10 +96,10 @@ find_module (network_definition_t *net, char *name)
 }
 
 static void
-add_gate (graph_t *g, name_stack_t *stack, char *name_s,
+add_gate (graph_t *g, name_stack_t *s, char *name_s,
           gate_t *gate, int j)
 {
-	char *full_name = get_full_name(stack, gate->name, j);
+	char *full_name = get_full_name(s, gate->name, j);
 	graph_add_node(g, full_name, NODE_GATE);
 	if (graph_add_edge_name(g, full_name, name_s) < 0) {
 		error("could not connect %s and %s\n",
@@ -110,25 +110,25 @@ add_gate (graph_t *g, name_stack_t *stack, char *name_s,
 
 static void
 expand_module (graph_t *g, module_t *module, network_definition_t *net,
-               name_stack_t *stack, param_stack_t *p);
+               name_stack_t *s, param_stack_t *p);
 
 static void
 enter_and_expand_module(network_definition_t *net, graph_t *g,
-                        name_stack_t *stack, param_stack_t *p,
+                        name_stack_t *s, param_stack_t *p,
                         submodule_t *smodule, int j)
 {
-	name_stack_enter(stack, smodule->name, j);
+	name_stack_enter(s, smodule->name, j);
 	module_t *module = find_module(net, smodule->module);
 	if (module == NULL) {
 		error("no such module: %s\n", smodule->module);
 	}
-	expand_module(g, module, net, stack, p);
-	name_stack_leave(stack);
+	expand_module(g, module, net, s, p);
+	name_stack_leave(s);
 }
 
 static void
 expand_module (graph_t *g, module_t *module, network_definition_t *net,
-               name_stack_t *stack, param_stack_t *p)
+               name_stack_t *s, param_stack_t *p)
 {
 	for (int i = 0; i < module->n_params; i++) {
 		if (param_stack_enter(p, &module->params[i]) < 0) {
@@ -136,7 +136,8 @@ expand_module (graph_t *g, module_t *module, network_definition_t *net,
 		}
 	}
 	if (module->submodules == NULL) {
-		char *name_s = name_stack_name(stack);
+		/* add gates and connect them to the node */
+		char *name_s = name_stack_name(s);
 		graph_add_node(g, name_s, NODE_NODE);
 		for (int i = 0; i < module->n_gates; i++) {
 			double size_d;
@@ -145,20 +146,42 @@ expand_module (graph_t *g, module_t *module, network_definition_t *net,
 			}
 			int size = lrint(size_d);
 			if (size == 0) {
-				add_gate(g, stack, name_s, &module->gates[i], -1);
+				add_gate(g, s, name_s, &module->gates[i], -1);
 			} else {
 				for (int j = 0; j < size; j++) {
-					add_gate(g, stack, name_s, &module->gates[i], j);
+					add_gate(g, s, name_s, &module->gates[i], j);
 				}
 			}
 		}
 		free(name_s);
 	} else {
+		/* add gates, add submodules, add connections */
+		for (int i = 0; i < module->n_gates; i++) {
+			double size_d;
+			if (param_stack_eval(p, module->gates[i].size, &size_d) < 0) {
+				error("could not evaluate %s\n", module->gates[i].size);
+			}
+			int size = lrint(size_d);
+			if (size == 0) {
+				char *full_name = get_full_name(s,
+					module->gates[i].name, -1);
+				graph_add_node(g, full_name, NODE_GATE);
+				free(full_name);
+			} else {
+				for (int j = 0; j < size; j++) {
+					char *full_name = get_full_name(s,
+						module->gates[i].name, j);
+					graph_add_node(g, full_name, NODE_GATE);
+					free(full_name);
+				}
+			}
+		}
 		for (int i = 0; i < module->n_submodules; i++) {
 			submodule_t smodule = module->submodules[i];
 			for (int i = 0; i < smodule.n_params; i++) {
 				if (param_stack_enter(p, &smodule.params[i]) < 0) {
-					error("could not evaluate %s\n", smodule.params[i].value);
+					error("could not evaluate %s\n",
+					      smodule.params[i].value);
 				}
 			}
 			int size;
@@ -169,11 +192,11 @@ expand_module (graph_t *g, module_t *module, network_definition_t *net,
 			}
 			if (size > 0) {
 				for (int j = 0; j < size; j++) {
-					enter_and_expand_module(net, g, stack,
+					enter_and_expand_module(net, g, s,
 						p, &smodule, j);
 				}
 			} else {
-				enter_and_expand_module(net, g, stack,
+				enter_and_expand_module(net, g, s,
 					p, &smodule, -1);
 			}
 			for (int i = 0; i < smodule.n_params; i++) {
@@ -183,12 +206,18 @@ expand_module (graph_t *g, module_t *module, network_definition_t *net,
 		for (int i = 0; i < module->n_connections; i++) {
 			if (module->connections[i].loop != NULL) {
 				double tmp_d;
-				if (param_stack_eval(p, module->connections[i].start, &tmp_d) < 0) {
-					error("could not evaluate %s\n", module->connections[i].start);
+				if (param_stack_eval(p, module->connections[i].start,
+				    &tmp_d) < 0)
+				{
+					error("could not evaluate %s\n",
+					      module->connections[i].start);
 				}
 				int start = lrint(tmp_d);
-				if (param_stack_eval(p, module->connections[i].end, &tmp_d) < 0) {
-					error("could not evaluate %s\n", module->connections[i].end);
+				if (param_stack_eval(p, module->connections[i].end,
+				    &tmp_d) < 0)
+				{
+					error("could not evaluate %s\n",
+					      module->connections[i].end);
 				}
 				int end = lrint(tmp_d);
 				if (start > end) {
@@ -197,12 +226,12 @@ expand_module (graph_t *g, module_t *module, network_definition_t *net,
 				for (int j = start; j <= end; j++) {
 					param_stack_enter_val(p,
 						module->connections[i].loop, j);
-					graph_eval_and_add_edge(g, p, stack,
+					graph_eval_and_add_edge(g, p, s,
 						&module->connections[i]);
 					param_stack_leave(p);
 				}
 			} else {
-				graph_eval_and_add_edge(g, p, stack,
+				graph_eval_and_add_edge(g, p, s,
 					&module->connections[i]);
 			}
 		}
@@ -220,20 +249,21 @@ definition_to_graph (network_definition_t *net)
 		error("no such module: %s\n", root_module);
 	}
 	graph_t *g = graph_create();
-	name_stack_t *stack = name_stack_create("network");
+	name_stack_t *s = name_stack_create("network");
 	param_stack_t *p = param_stack_create();
 	for (int i = 0; i < net->network->n_params; i++) {
 		if (param_stack_enter(p, &net->network->params[i]) < 0) {
-			error("could not evaluate %s\n", net->network->params[i].value);
+			error("could not evaluate %s\n",
+			      net->network->params[i].value);
 		}
 	}
-	expand_module(g, root_module, net, stack, p);
+	expand_module(g, root_module, net, s, p);
 	for (int i = 0; i < net->network->n_params; i++) {
 		param_stack_leave(p);
 	}
 	param_stack_destroy(p);
-	free(stack->name);
-	free(stack);
+	free(s->name);
+	free(s);
 	return g;
 }
 
@@ -254,7 +284,7 @@ graph_gate_neighbors (node_t *gate, node_t **node_1, node_t **node_2)
 		}
 		l = l->next;
 	}
-	/*
+	/* TODO strict mode ?
 	if ((*node_1 == NULL) || (*node_2 == NULL))
 		error("gate %s is connected less than two times", gate->name);
 	*/
