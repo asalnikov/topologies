@@ -351,6 +351,37 @@ find_module (network_definition_t *net, char *name)
 }
 
 static void
+add_gate (graph_t *g, name_stack_t *stack, char *name_s,
+          gate_t *gate, int j)
+{
+	char *full_name = get_full_name(stack, gate->name, j);
+	graph_add_node(g, full_name, NODE_GATE);
+	if (graph_add_edge_name(g, full_name, name_s) < 0) {
+		error("could not connect %s and %s\n",
+			full_name, name_s);
+	}
+	free(full_name);
+}
+
+static void
+expand_module (graph_t *g, module_t *module, network_definition_t *net,
+               name_stack_t *stack, param_stack_t *p);
+
+static void
+enter_and_expand_module(network_definition_t *net, graph_t *g,
+                        name_stack_t *stack, param_stack_t *p,
+                        submodule_t *smodule, int j)
+{
+	name_stack_enter(stack, smodule->name, j);
+	module_t *module = find_module(net, smodule->module);
+	if (module == NULL) {
+		error("no such module: %s\n", smodule->module);
+	}
+	expand_module(g, module, net, stack, p);
+	name_stack_leave(stack);
+}
+
+static void
 expand_module (graph_t *g, module_t *module, network_definition_t *net,
                name_stack_t *stack, param_stack_t *p)
 {
@@ -359,32 +390,14 @@ expand_module (graph_t *g, module_t *module, network_definition_t *net,
 	}
 	if (module->submodules == NULL) {
 		char *name_s = name_stack_name(stack);
-		char *full_name;
 		graph_add_node(g, name_s, NODE_NODE);
 		for (int i = 0; i < module->n_gates; i++) {
-			full_name = NULL;
-			int size = lrint(param_stack_eval(p,
-				module->gates[i].size));
+			int size = lrint(param_stack_eval(p, module->gates[i].size));
 			if (size == 0) {
-				full_name = get_full_name(stack,
-					module->gates[i].name, -1);
-				graph_add_node(g, full_name, NODE_GATE);
-				if (graph_add_edge_name(g, full_name, name_s) < 0) {
-					error("could not connect %s and %s\n",
-						full_name, name_s);
-				}
-				free(full_name);
+				add_gate(g, stack, name_s, &module->gates[i], -1);
 			} else {
 				for (int j = 0; j < size; j++) {
-					full_name = get_full_name(stack,
-						module->gates[i].name, j);
-					graph_add_node(g, full_name, NODE_GATE);
-					if (graph_add_edge_name(g, full_name, name_s) < 0) {
-						error("could not connect %s and %s\n",
-							full_name, name_s);
-
-					}
-					free(full_name);
+					add_gate(g, stack, name_s, &module->gates[i], j);
 				}
 			}
 		}
@@ -403,17 +416,12 @@ expand_module (graph_t *g, module_t *module, network_definition_t *net,
 			}
 			if (size > 0) {
 				for (int j = 0; j < size; j++) {
-					name_stack_enter(stack, smodule.name, j);
-					module_t *module = find_module(net,
-					                               smodule.module);
-					expand_module(g, module, net, stack, p);
-					name_stack_leave(stack);
+					enter_and_expand_module(net, g, stack,
+						p, &smodule, j);
 				}
 			} else {
-				name_stack_enter(stack, smodule.name, -1);
-				module_t *module = find_module(net, smodule.module);
-				expand_module(g, module, net, stack, p);
-				name_stack_leave(stack);
+				enter_and_expand_module(net, g, stack,
+					p, &smodule, -1);
 			}
 			for (int i = 0; i < smodule.n_params; i++) {
 				param_stack_leave(p);
@@ -450,6 +458,9 @@ static graph_t *
 definition_to_graph (network_definition_t *net)
 {
 	module_t *root_module = find_module(net, net->network->module);
+	if (root_module == NULL) {
+		error("no such module: %s\n", root_module);
+	}
 	graph_t *g = graph_create();
 	name_stack_t *stack = name_stack_create("network");
 	param_stack_t *p = param_stack_create();
@@ -458,7 +469,7 @@ definition_to_graph (network_definition_t *net)
 	}
 	expand_module(g, root_module, net, stack, p);
 	for (int i = 0; i < net->network->n_params; i++) {
-		/* not required, can be removed for optimization */
+		/* not required */
 		param_stack_leave(p);
 	}
 	param_stack_destroy(p);
@@ -490,12 +501,10 @@ graph_gate_neighbors (node_t *gate, node_t **node_1, node_t **node_2)
 	*/
 }
 
-static void
-graph_gate_connects_whom (node_t *gate, node_t **n_node_1, node_t **n_node_2)
+static node_t *
+graph_traverse_gate_neighbors (node_t *gate, node_t *node_a)
 {
-	node_t *node_a, *node_b, *node_ta, *node_tb, *node_prev;
-	gate->type = NODE_GATE_VISITED;
-	graph_gate_neighbors(gate, &node_a, &node_b);
+	node_t *node_ta, *node_tb, *node_prev;
 	if (node_a != NULL) {
 		node_prev = gate;
 		while (node_a->type != NODE_NODE) {
@@ -511,24 +520,18 @@ graph_gate_connects_whom (node_t *gate, node_t **n_node_1, node_t **n_node_2)
 			}
 		}
 	}
-	if (node_b != NULL) {
-		node_prev = gate;
-		while (node_b->type != NODE_NODE) {
-			node_b->type = NODE_GATE_VISITED;
-			graph_gate_neighbors(node_b, &node_ta, &node_tb);
-			if ((node_ta == NULL) || (node_tb == NULL)) break;
-			if (node_ta != node_prev) {
-				node_prev = node_b;
-				node_b = node_ta;
-			} else {
-				node_prev = node_b;
-				node_b = node_tb;
-			}
-		}
-	}
 
-	*n_node_1 = node_a;
-	*n_node_2 = node_b;
+	return node_a;
+}
+
+static void
+graph_gate_connects_whom (node_t *gate, node_t **n_node_1, node_t **n_node_2)
+{
+	node_t *node_a, *node_b;
+	gate->type = NODE_GATE_VISITED;
+	graph_gate_neighbors(gate, &node_a, &node_b);
+	*n_node_1 = graph_traverse_gate_neighbors(gate, node_a);
+	*n_node_2 = graph_traverse_gate_neighbors(gate, node_b);
 }
 
 static void

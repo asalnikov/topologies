@@ -1,14 +1,7 @@
-#include <errno.h>
-#include <fcntl.h>
-#include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
 #include <string.h>
-#include <unistd.h>
-#include <math.h>
-#include <sys/stat.h>
-#include <sys/mman.h>
 
 #include "graph.h"
 #include "defs.h"
