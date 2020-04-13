@@ -22,6 +22,7 @@
  * param vectors
  * compact network form
  * rewrite malloc
+ * free memory on error
  */
 
 static void
@@ -31,29 +32,33 @@ error (const char * errmsg, ...)
 	va_start(args, errmsg);
 	fprintf(stderr, errmsg, args);
 	va_end(args);
+	fflush(stdout);
 	exit(EXIT_FAILURE);
 }
 
 static off_t
-read_file (int argc, char *argv[], char **addr)
+file_map (char *filename, char **addr)
 {
-	if (argc != 2)
-		error("usage: %s config.json\n", argv[0]);
-
-	int fd = open(argv[1], O_RDONLY);
+	int fd = open(filename, O_RDONLY);
 	if (fd < 0)
-		error("could not open %s: %s\n", argv[1], strerror(errno));
+		error("could not open %s: %s\n", filename, strerror(errno));
 
 	struct stat st;
 	if (fstat(fd, &st) < 0)
-		error("could not stat %s: %s\n", argv[1], strerror(errno));
+		error("could not stat %s: %s\n", filename, strerror(errno));
 
 	*addr = mmap(0, st.st_size, PROT_READ, MAP_PRIVATE, fd, 0);
 	if (*addr == MAP_FAILED)
-		error("could not mmap %s: %s\n", argv[1], strerror(errno));
+		error("could not mmap %s: %s\n", filename, strerror(errno));
 
 	close(fd);
 	return st.st_size;
+}
+
+static void
+file_close (char *addr, size_t len)
+{
+	munmap(addr, len);
 }
 
 static void
@@ -84,9 +89,10 @@ graph_eval_and_add_edge (graph_t *g, param_stack_t *p,
 static module_t *
 find_module (network_definition_t *net, char *name)
 {
-	for (int i = 0; i < net->n_modules; i++)
+	for (int i = 0; i < net->n_modules; i++) {
 		if (strcmp(net->modules[i].name, name) == 0)
 			return &net->modules[i];
+	}
 	return NULL;
 }
 
@@ -241,9 +247,16 @@ expand_module (graph_t *g, module_t *module, network_definition_t *net,
 static graph_t *
 definition_to_graph (network_definition_t *net)
 {
+	if (net->network == NULL)
+		error("no network given\n");
 	module_t *root_module = find_module(net, net->network->module);
 	if (root_module == NULL) {
-		error("no such module: %s\n", root_module);
+		/* this does not work */
+		/* error("no such module: %s\n", net->network->module); */
+		/* and this gives a segfault in glibc, probably some bug? */
+		/* error("no such module: %s %s\n", net->network->module,
+		 *                                  net->network->module);*/
+		error("no such module\n");
 	}
 	graph_t *g = graph_create();
 	name_stack_t *s = name_stack_create("network");
@@ -428,12 +441,20 @@ int
 main (int argc, char *argv[])
 {
 	char *addr = NULL;
+	off_t file_size;
+	int res;
 	network_definition_t network_definition = { 0 };
 
-	off_t file_size = read_file(argc, argv, &addr);
-	int res = json_read_file(addr, file_size, &network_definition);
-	if (res < 0)
-		error("%s: invalid JSON data: %d\n", argv[1], res);
+	if (argc < 2)
+		error("usage: %s config.json [config_2.json ...]\n", argv[0]);
+
+	for (int i = 1; i < argc; i++) {
+		file_size = file_map(argv[i], &addr);
+		res = json_read_file(addr, file_size, &network_definition);
+		file_close(addr, file_size);
+		if (res < 0)
+			error("%s: invalid JSON data: %d\n", argv[i], res);
+	}
 
 	graph_t *gg = definition_to_graph(&network_definition);
 	graph_print(gg, stdout, true);

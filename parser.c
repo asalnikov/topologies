@@ -40,7 +40,7 @@ static void
 json_str_cpy (const char *json, jsmntok_t *tok, char **t)
 {
 	int s_len = tok->end - tok->start;
-	*t = (char *) calloc(s_len + 1, 1);
+	*t = calloc(s_len + 1, 1);
 	strncpy(*t, json + tok->start, s_len);
 }
 
@@ -143,20 +143,20 @@ bad_token (int i, int type, int start_pos, char *text, state_t state)
 }
 
 static void
-parse_connection (int subobject_n, jsmntok_t *tokens, char *text,
+parse_connection (int subobj_n, jsmntok_t *tokens, char *text,
                   connection_wrapper_t *connection, int *i)
 {
 	/* at the start, i points at the outermost object */
 	int state = STATE_MODULE_CONNECTION;
-	if ((subobject_n != 2) && (subobject_n != 4)) {
+	if ((subobj_n != 2) && (subobj_n != 4)) {
 		bad_token(*i, tokens[*i].type, tokens[*i].start, text, state);
 	}
 
 	*i += 1;
-	if (subobject_n == 2) {
+	if (subobj_n == 2) {
 		connection->type = CONN_HAS_CONN;
 		connection->ptr.conn = calloc(1, sizeof(connection_plain_t));
-		for (int subobject_i = 0; subobject_i < subobject_n; subobject_i++) {
+		for (int subobj_i = 0; subobj_i < subobj_n; subobj_i++) {
 			if (json_str_eq(text, &tokens[*i], "from")) {
 				if (connection->ptr.conn->from != NULL)
 					bad_token(*i, tokens[*i].type,
@@ -176,10 +176,10 @@ parse_connection (int subobject_n, jsmntok_t *tokens, char *text,
 					 text, state);
 			}
 		}
-	} else if (subobject_n == 4) {
+	} else if (subobj_n == 4) {
 		connection->type = CONN_HAS_LOOP;
 		connection->ptr.loop = calloc(1, sizeof(connection_loop_t));
-		for (int subobject_i = 0; subobject_i < subobject_n; subobject_i++) {
+		for (int subobj_i = 0; subobj_i < subobj_n; subobj_i++) {
 			if (json_str_eq(text, &tokens[*i], "start")) {
 				if (connection->ptr.loop->start != NULL)
 					bad_token(*i, tokens[*i].type,
@@ -212,7 +212,6 @@ parse_connection (int subobject_n, jsmntok_t *tokens, char *text,
 					          text, state);
 				}
 				connection->ptr.loop->conn =
-					(connection_wrapper_t *)
 					calloc(1, sizeof(connection_wrapper_t));
 				parse_connection(tokens[*i].size, tokens, text,
 				                 connection->ptr.loop->conn, i);
@@ -226,21 +225,21 @@ parse_connection (int subobject_n, jsmntok_t *tokens, char *text,
 
 static void
 json_deserialize (jsmntok_t *tokens, int n_tokens, char *text,
-                  network_definition_t *network_definition)
+                  network_definition_t *net)
 {
-	module_t *modules = NULL;
+	module_t *m = NULL;
 	network_t *network = NULL;
-	int modules_n = 0;
-	int modules_i = -1;
+	int m_n = 0;
+	int m_i = -1;
 	int i = 0;
-	int array_i = 0;
-	int array_n = 0;
-	int object_i = 0;
-	int object_n = 0;
-	int subarray_i = 0;
-	int subarray_n = 0;
-	int subobject_i = 0;
-	int subobject_n = 0;
+	int arr_i = 0;
+	int arr_n = 0;
+	int obj_i = 0;
+	int obj_n = 0;
+	int subarr_i = 0;
+	int subarr_n = 0;
+	int subobj_i = 0;
+	int subobj_n = 0;
 	state_t state = STATE_START;
 
 	do {
@@ -248,12 +247,14 @@ json_deserialize (jsmntok_t *tokens, int n_tokens, char *text,
 			if (tokens[i].type != JSMN_ARRAY)
 				bad_token(i, tokens[i].type, tokens[i].start,
 				          text, state);
-			modules_n = tokens[i].size;
-			modules = (module_t *) calloc(modules_n, sizeof(module_t));
-			network_definition->n_modules = modules_n;
-			network_definition->modules = modules;
-			network = (network_t *) calloc(1, sizeof(network_t));
-			network_definition->network = network;
+			m_n = tokens[i].size;
+			m_i = net->n_modules - 1;
+			m = realloc(net->modules,
+			            (net->n_modules + m_n) * sizeof(module_t));
+			memset(m + net->n_modules, 0,
+			       m_n * sizeof(module_t));
+			net->n_modules += m_n;
+			net->modules = m;
 			i++;
 			state = STATE_BETWEEN;
 
@@ -265,25 +266,32 @@ json_deserialize (jsmntok_t *tokens, int n_tokens, char *text,
 				          text, state);
 			}
 			if (json_str_eq(text, &tokens[i + 1], "module")) {
-				modules_i += 1;
+				m_i += 1;
 				state = STATE_MODULE;
 				i += 2;
 				if (tokens[i].type != JSMN_OBJECT)
 					bad_token(i, tokens[i].type,
 					          tokens[i].start, text,
 					          state);
-				object_n = tokens[i].size;
-				object_i = 0;
+				obj_n = tokens[i].size;
+				obj_i = 0;
 				i += 1;
 			} else if (json_str_eq(text, &tokens[i + 1], "network")) {
 				state = STATE_NETWORK;
 				i += 2;
-				if (tokens[i].type != JSMN_OBJECT)
+				net->n_modules -= 1;
+				m_n -= 1;
+				if ((tokens[i].type != JSMN_OBJECT) ||
+				    (net->network != NULL))
+				{
 					bad_token(i, tokens[i].type,
 					          tokens[i].start, text,
 					          state);
-				object_n = tokens[i].size;
-				object_i = 0;
+				}
+				network = calloc(1, sizeof(network_t));
+				net->network = network;
+				obj_n = tokens[i].size;
+				obj_i = 0;
 				i += 1;
 			} else {
 				bad_token(i, tokens[i + 1].type,
@@ -291,19 +299,19 @@ json_deserialize (jsmntok_t *tokens, int n_tokens, char *text,
 			}
 
 		} else if (state == STATE_MODULE) {
-			if (object_i == object_n) {
+			if (obj_i == obj_n) {
 				state = STATE_BETWEEN;
 			} else if (json_str_eq(text, &tokens[i], "name")) {
-				if (modules[modules_i].name != NULL)
+				if (m[m_i].name != NULL)
 					bad_token(i, tokens[i].type,
 					          tokens[i].start, text,
 					          state);
 				json_str_cpy(text, &tokens[i + 1],
-				             &modules[modules_i].name);
-				object_i += 1;
+				             &m[m_i].name);
+				obj_i += 1;
 				i += 2;
 			} else if (json_str_eq(text, &tokens[i], "params")) {
-				object_i += 1;
+				obj_i += 1;
 				i += 1;
 				if (tokens[i].type != JSMN_ARRAY)
 					bad_token(i, tokens[i].type,
@@ -311,63 +319,61 @@ json_deserialize (jsmntok_t *tokens, int n_tokens, char *text,
 					          state);
 				state = STATE_MODULE_PARAMS;
 			} else if (json_str_eq(text, &tokens[i], "submodules")) {
-				object_i += 1;
+				obj_i += 1;
 				i += 1;
 				if (tokens[i].type != JSMN_ARRAY)
 					bad_token(i, tokens[i].type,
 					          tokens[i].start, text,
 					          state);
-				array_n = tokens[i].size;
-				array_i = 0;
-				if (modules[modules_i].submodules != NULL)
+				arr_n = tokens[i].size;
+				arr_i = 0;
+				if (m[m_i].submodules != NULL)
 					bad_token(i, tokens[i].type,
 					          tokens[i].start, text,
 					          state);
-				if (array_n > 0)
-					modules[modules_i].submodules =
-						(submodule_t *) calloc(array_n,
-						sizeof(submodule_t));
-				modules[modules_i].n_submodules = array_n;
+				if (arr_n > 0)
+					m[m_i].submodules =
+						calloc(arr_n, sizeof(submodule_t));
+				m[m_i].n_submodules = arr_n;
 				i += 1;
 				state = STATE_MODULE_SUBMODULES_BETWEEN;
 			} else if (json_str_eq(text, &tokens[i], "connections")) {
-				object_i += 1;
+				obj_i += 1;
 				i += 1;
 				if (tokens[i].type != JSMN_ARRAY)
 					bad_token(i, tokens[i].type,
 					          tokens[i].start, text,
 					          state);
-				if (modules[modules_i].connections != NULL)
+				if (m[m_i].connections != NULL)
 					bad_token(i, tokens[i].type,
 					          tokens[i].start,
 					          text, state);
-				array_n = tokens[i].size;
-				array_i = 0;
-				if (array_n > 0)
-					modules[modules_i].connections =
-						(connection_wrapper_t *) calloc(array_n,
+				arr_n = tokens[i].size;
+				arr_i = 0;
+				if (arr_n > 0)
+					m[m_i].connections =
+						calloc(arr_n,
 						sizeof(connection_wrapper_t));
-				modules[modules_i].n_connections = array_n;
+				m[m_i].n_connections = arr_n;
 				i += 1;
 				state = STATE_MODULE_CONNECTIONS_BETWEEN;
 			} else if (json_str_eq(text, &tokens[i], "gates")) {
-				object_i += 1;
+				obj_i += 1;
 				i += 1;
 				if (tokens[i].type != JSMN_ARRAY)
 					bad_token(i, tokens[i].type,
 					          tokens[i].start, text,
 					          state);
-				if (modules[modules_i].gates != NULL)
+				if (m[m_i].gates != NULL)
 					bad_token(i, tokens[i].type,
 					          tokens[i].start,
 					          text, state);
-				array_n = tokens[i].size;
-				array_i = 0;
-				if (array_n > 0)
-					modules[modules_i].gates =
-						(gate_t *) calloc(array_n,
-						sizeof(gate_t));
-				modules[modules_i].n_gates = array_n;
+				arr_n = tokens[i].size;
+				arr_i = 0;
+				if (arr_n > 0)
+					m[m_i].gates =
+						calloc(arr_n, sizeof(gate_t));
+				m[m_i].n_gates = arr_n;
 				i += 1;
 				state = STATE_MODULE_GATES_BETWEEN;
 			} else {
@@ -376,18 +382,17 @@ json_deserialize (jsmntok_t *tokens, int n_tokens, char *text,
 			}
 
 		} else if (state == STATE_MODULE_PARAMS) {
-			array_n = tokens[i].size;
-			if (modules[modules_i].params != NULL)
+			arr_n = tokens[i].size;
+			if (m[m_i].params != NULL)
 				bad_token(i, tokens[i].type, tokens[i].start,
 				          text, state);
-			if (array_n > 0) {
-				modules[modules_i].params =
-					(raw_param_t *) calloc(array_n,
-					sizeof(raw_param_t));
+			if (arr_n > 0) {
+				m[m_i].params =
+					calloc(arr_n, sizeof(raw_param_t));
 			}
-			modules[modules_i].n_params = array_n;
+			m[m_i].n_params = arr_n;
 			i += 1;
-			for (array_i = 0; array_i < array_n; array_i++) {
+			for (arr_i = 0; arr_i < arr_n; arr_i++) {
 				if ((tokens[i].type != JSMN_OBJECT) ||
 				    (tokens[i].size != 1) ||
 				    (tokens[i + 1].type != JSMN_STRING) ||
@@ -397,27 +402,28 @@ json_deserialize (jsmntok_t *tokens, int n_tokens, char *text,
 					          tokens[i].start, text, state);
 				}
 				json_str_cpy(text, &tokens[i + 1],
-				             &modules[modules_i].params[array_i].name);
+				             &m[m_i].params[arr_i].name);
 				json_str_cpy(text, &tokens[i + 2],
-				             &modules[modules_i].params[array_i].value);
+				             &m[m_i].params[arr_i].value);
 				i += 3;
-
 			}
 			state = STATE_MODULE;
+
 		} else if (state == STATE_MODULE_GATES_BETWEEN) {
-			if (array_i == array_n) {
+			if (arr_i == arr_n) {
 				state = STATE_MODULE;
 			} else if (tokens[i].type != JSMN_OBJECT) {
 				bad_token(i, tokens[i].type, tokens[i].start,
 				          text, state);
 			} else {
-				subobject_i = 0;
-				subobject_n = tokens[i].size;
+				subobj_i = 0;
+				subobj_n = tokens[i].size;
 				state = STATE_MODULE_GATE;
 				i += 1;
 			}
+			
 		} else if (state == STATE_MODULE_CONNECTIONS_BETWEEN) {
-			if (array_i == array_n) {
+			if (arr_i == arr_n) {
 				state = STATE_MODULE;
 			} else if (tokens[i].type != JSMN_OBJECT) {
 				bad_token(i, tokens[i].type, tokens[i].start,
@@ -425,57 +431,59 @@ json_deserialize (jsmntok_t *tokens, int n_tokens, char *text,
 			} else {
 				state = STATE_MODULE_CONNECTION;
 			}
+
 		} else if (state == STATE_MODULE_SUBMODULES_BETWEEN) {
-			if (array_i == array_n) {
+			if (arr_i == arr_n) {
 				state = STATE_MODULE;
 			} else if (tokens[i].type != JSMN_OBJECT) {
 				bad_token(i, tokens[i].type, tokens[i].start,
 				          text, state);
 			} else {
-				subobject_i = 0;
-				subobject_n = tokens[i].size;
+				subobj_i = 0;
+				subobj_n = tokens[i].size;
 				state = STATE_MODULE_SUBMODULE;
 				i += 1;
 			}
+
 		} else if (state == STATE_MODULE_CONNECTION) {
-			subobject_i = 0;
-			subobject_n = tokens[i].size;
-			parse_connection(subobject_n, tokens, text,
-			                 &modules[modules_i].connections[array_i],
+			subobj_i = 0;
+			subobj_n = tokens[i].size;
+			parse_connection(subobj_n, tokens, text,
+			                 &m[m_i].connections[arr_i],
 					 &i);
 			state = STATE_MODULE_CONNECTIONS_BETWEEN;
-			array_i += 1;
+			arr_i += 1;
 
 		} else if (state == STATE_MODULE_SUBMODULE) {
-			if (subobject_i == subobject_n) {
+			if (subobj_i == subobj_n) {
 				state = STATE_MODULE_SUBMODULES_BETWEEN;
-				array_i += 1;
+				arr_i += 1;
 			} else if (json_str_eq(text, &tokens[i], "name")) {
-				if (modules[modules_i].submodules[array_i].name != NULL)
+				if (m[m_i].submodules[arr_i].name != NULL)
 					bad_token(i, tokens[i].type,
 					          tokens[i].start, text, state);
 				json_str_cpy(text, &tokens[i + 1],
-				             &modules[modules_i].submodules[array_i].name);
-				subobject_i += 1;
+				             &m[m_i].submodules[arr_i].name);
+				subobj_i += 1;
 				i += 2;
 			} else if (json_str_eq(text, &tokens[i], "module")) {
-				if (modules[modules_i].submodules[array_i].module != NULL)
+				if (m[m_i].submodules[arr_i].module != NULL)
 					bad_token(i, tokens[i].type,
 					          tokens[i].start, text, state);
 				json_str_cpy(text, &tokens[i + 1],
-				             &modules[modules_i].submodules[array_i].module);
-				subobject_i += 1;
+				             &m[m_i].submodules[arr_i].module);
+				subobj_i += 1;
 				i += 2;
 			} else if (json_str_eq(text, &tokens[i], "size")) {
-				if (modules[modules_i].submodules[array_i].size != NULL)
+				if (m[m_i].submodules[arr_i].size != NULL)
 					bad_token(i, tokens[i].type,
 					          tokens[i].start, text, state);
 				json_str_cpy(text, &tokens[i + 1],
-				             &modules[modules_i].submodules[array_i].size);
-				subobject_i += 1;
+				             &m[m_i].submodules[arr_i].size);
+				subobj_i += 1;
 				i += 2;
 			} else if (json_str_eq(text, &tokens[i], "params")) {
-				subobject_i += 1;
+				subobj_i += 1;
 				i += 1;
 				if (tokens[i].type != JSMN_ARRAY)
 					bad_token(i, tokens[i].type,
@@ -486,15 +494,15 @@ json_deserialize (jsmntok_t *tokens, int n_tokens, char *text,
 				         text, state);
 			}
 		} else if (state == STATE_MODULE_SUBMODULE_PARAMS) {
-			subarray_n = tokens[i].size;
-			if (modules[modules_i].submodules[array_i].params != NULL)
+			subarr_n = tokens[i].size;
+			if (m[m_i].submodules[arr_i].params != NULL)
 				bad_token(i, tokens[i].type, tokens[i].start,
 				          text, state);
-			if (array_n > 0)
-				modules[modules_i].submodules[array_i].params =
-					(raw_param_t *) calloc(array_n, sizeof(raw_param_t));
-			modules[modules_i].submodules[array_i].n_params = subarray_n;
-			for (subarray_i = 0; subarray_i < subarray_n; subarray_i++) {
+			if (arr_n > 0)
+				m[m_i].submodules[arr_i].params =
+					calloc(arr_n, sizeof(raw_param_t));
+			m[m_i].submodules[arr_i].n_params = subarr_n;
+			for (subarr_i = 0; subarr_i < subarr_n; subarr_i++) {
 				if ((tokens[i].type != JSMN_OBJECT) ||
 				    (tokens[i].size != 1) ||
 				    (tokens[i + 1].type != JSMN_STRING) ||
@@ -504,27 +512,29 @@ json_deserialize (jsmntok_t *tokens, int n_tokens, char *text,
 					          tokens[i].start, text, state);
 				}
 				json_str_cpy(text, &tokens[i + 1],
-				             &modules[modules_i].submodules[array_i].params[subarray_i].name);
+				             &m[m_i].submodules[arr_i].params[subarr_i].name);
 				json_str_cpy(text, &tokens[i + 2],
-				             &modules[modules_i].submodules[array_i].params[subarray_i].value);
+				             &m[m_i].submodules[arr_i].params[subarr_i].value);
 				i += 3;
 			}
 			i += 1;
 			state = STATE_MODULE_SUBMODULE;
+
 		} else if (state == STATE_MODULE_GATE) {
-			if (subobject_i == subobject_n) {
+			if (subobj_i == subobj_n) {
 				state = STATE_MODULE_GATES_BETWEEN;
-				array_i += 1;
+				arr_i += 1;
 			} else {
 				json_str_cpy(text, &tokens[i],
-					     &modules[modules_i].gates[array_i].name);
+					     &m[m_i].gates[arr_i].name);
 				json_str_cpy(text, &tokens[i + 1],
-					     &modules[modules_i].gates[array_i].size);
+					     &m[m_i].gates[arr_i].size);
 				i += 2;
-				subobject_i += 1;
+				subobj_i += 1;
 			}
+
 		} else if (state == STATE_NETWORK) {
-			if (object_i == object_n) {
+			if (obj_i == obj_n) {
 				state = STATE_BETWEEN;
 			} else if (json_str_eq(text, &tokens[i], "module")) {
 				if (network->module != NULL)
@@ -532,10 +542,10 @@ json_deserialize (jsmntok_t *tokens, int n_tokens, char *text,
 					          tokens[i].start, text, state);
 				json_str_cpy(text, &tokens[i + 1],
 				             &network->module);
-				object_i += 1;
+				obj_i += 1;
 				i += 2;
 			} else if (json_str_eq(text, &tokens[i], "params")) {
-				object_i += 1;
+				obj_i += 1;
 				i += 1;
 				if (tokens[i].type != JSMN_ARRAY)
 					bad_token(i, tokens[i].type,
@@ -545,16 +555,16 @@ json_deserialize (jsmntok_t *tokens, int n_tokens, char *text,
 				bad_token(i, tokens[i].type, tokens[i].start,
 				         text, state);
 			}
+
 		} else if (state == STATE_NETWORK_PARAMS) {
-			array_n = tokens[i].size;
+			arr_n = tokens[i].size;
 			if (network->params != NULL)
 				bad_token(i, tokens[i].type, tokens[i].start,
 				          text, state);
-			if (array_n > 0)
-				network->params =
-					(raw_param_t *) calloc(array_n, sizeof(raw_param_t));
-			network->n_params = array_n;
-			for (array_i = 0; array_i < array_n; array_i++) {
+			if (arr_n > 0)
+				network->params = calloc(arr_n, sizeof(raw_param_t));
+			network->n_params = arr_n;
+			for (arr_i = 0; arr_i < arr_n; arr_i++) {
 				if ((tokens[i].type != JSMN_OBJECT) ||
 				    (tokens[i].size != 1) ||
 				    (tokens[i + 1].type != JSMN_STRING) ||
@@ -564,9 +574,9 @@ json_deserialize (jsmntok_t *tokens, int n_tokens, char *text,
 					          tokens[i].start, text, state);
 				}
 				json_str_cpy(text, &tokens[i + 1],
-				             &network->params[array_i].name);
+				             &network->params[arr_i].name);
 				json_str_cpy(text, &tokens[i + 2],
-				             &network->params[array_i].value);
+				             &network->params[arr_i].value);
 				i += 3;
 			}
 			i += 1;
@@ -595,7 +605,7 @@ json_print (jsmntok_t *tokens, int n_tokens, char *text)
 */
 int
 json_read_file (char *text, off_t file_size,
-                network_definition_t *network_definition)
+                network_definition_t *net)
 {
 
 	jsmntok_t *tokens;
@@ -604,12 +614,12 @@ json_read_file (char *text, off_t file_size,
 	int n_tokens = jsmn_parse(&parser, text, file_size, NULL, 0);
 	if (n_tokens < 0)
 		return n_tokens;
-	tokens = (jsmntok_t *) malloc(sizeof(jsmntok_t) * (size_t) n_tokens);
+	tokens = malloc(sizeof(jsmntok_t) * (size_t) n_tokens);
 	jsmn_init(&parser);
 	jsmn_parse(&parser, text, file_size, tokens, n_tokens);
 	/* json_print(tokens, n_tokens, text); */
 
-	json_deserialize(tokens, n_tokens, text, network_definition);
+	json_deserialize(tokens, n_tokens, text, net);
 	free(tokens);
 	return 0;
 }

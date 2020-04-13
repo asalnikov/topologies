@@ -1,0 +1,35 @@
+[{ "module":
+	{ "name": "net",
+	  "params": [
+		{ "k": "2" }
+	  ],
+	  "submodules": [
+		{
+			"name": "simplevec",
+			"module": "simple",
+			"size": 4,
+			"params": []
+		}
+	  ],
+	  "connections": [
+		{
+			"loop": "i",
+			"start": "0",
+			"end": "1",
+			"conn": {
+				"loop": "j",
+				"start": "0",
+				"end": "1",
+				"conn": {
+					"from": "simplevec[2*i].gate[j]",
+					"to": "simplevec[2*i+1].gate[j]"
+				}
+			}
+		}
+	  ],
+	  "gates": [
+	  	{ "out": "2" }
+	  ]
+	}
+}
+]
