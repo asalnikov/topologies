@@ -7,7 +7,7 @@
 #include "defs.h"
 
 graph_t *
-graph_create (void)
+topologies_graph_create (void)
 {
 	graph_t *g = (graph_t *) malloc(sizeof(graph_t));
 	g->n_nodes = 0;
@@ -73,7 +73,7 @@ graph_add_edge_name (graph_t *g, char *name_a, char *name_b)
 }
 
 void
-graph_print (graph_t *g, FILE *stream, bool print_gate_nodes)
+topologies_graph_print (graph_t *g, FILE *stream, bool print_gate_nodes)
 {
 	node_list_t *l;
 	fprintf(stream, "graph g {\n");
@@ -95,7 +95,7 @@ graph_print (graph_t *g, FILE *stream, bool print_gate_nodes)
 }
 
 void
-graph_destroy (graph_t *g)
+topologies_graph_destroy (graph_t *g)
 {
 	node_list_t *l, *l_next;
 	for (int i = 0; i < g->n_nodes; i++) {

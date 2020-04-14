@@ -1,0 +1,4 @@
+LIBTOPOLOGIES_1.0 {
+	global: topologies*;
+	local: *;
+};

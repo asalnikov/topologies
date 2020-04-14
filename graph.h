@@ -4,7 +4,7 @@
 #include "defs.h"
 
 graph_t *
-graph_create (void);
+topologies_graph_create (void);
 
 node_t *
 graph_add_node (graph_t *g, char *name, node_type type);
@@ -16,9 +16,9 @@ int
 graph_add_edge_name (graph_t *g, char *name_a, char *name_b);
 
 void
-graph_print (graph_t *g, FILE *stream, bool print_gate_nodes);
+topologies_graph_print (graph_t *g, FILE *stream, bool print_gate_nodes);
 
 void
-graph_destroy (graph_t *g);
+topologies_graph_destroy (graph_t *g);
 
 #endif

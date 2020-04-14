@@ -3,9 +3,8 @@
 #include <stdbool.h>
 #include <string.h>
 
-#include "graph.h"
-#include "name_stack.h"
 #include "defs.h"
+#include "name_stack.h"
 
 name_stack_t *
 name_stack_create (char *name)
