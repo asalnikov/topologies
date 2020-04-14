@@ -7,11 +7,38 @@
 #include "topologies.h"
 
 /* TODO
- * param vectors
- * compact network form
- * rewrite malloc
  * free memory on error
+ * error propagation
+ * if in connections
+ * pass submodule's module as a param
+ * distinguish simple and compound modules
+ * distinguish nodes and routers
+ * cartesian product https://en.wikipedia.org/wiki/Cartesian_product_of_graphs
+ ** compact the subgraph before computing product
+ *
+ * param vectors ?
+ * rewrite malloc ?
+ * strict mode, error on unconnected gates ?
+ * connect to next free gate ?
+ *
+ * compact network form - in the end
+ * exceptions / irregularities - in the end
  */
+
+/* TinyExpr supports addition (+), subtraction/negation (-), multiplication (*),
+ * division (/), exponentiation (^) and modulus (%).
+ * 
+ * The following C math functions are also supported:
+ * abs (calls to fabs), acos, asin, atan, atan2, ceil, cos, cosh, exp, floor,
+ * ln, log (calls to log10), log10, pow, sin, sinh, sqrt, tan, tanh.
+ *
+ * The following functions are also built-in and provided by TinyExpr:
+ * fac (factorials e.g. fac 5 == 120)
+ * ncr (combinations e.g. ncr(6,2) == 15)
+ * npr (permutations e.g. npr(6,2) == 30)
+ *
+ * Also, the following constants are available: pi, e.
+*/
 
 static void
 error (const char * errmsg, ...)
