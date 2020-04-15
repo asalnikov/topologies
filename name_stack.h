@@ -4,7 +4,7 @@
 name_stack_t *
 name_stack_create (char *name);
 
-void
+int
 name_stack_enter (name_stack_t *s, char *name, int index);
 
 void

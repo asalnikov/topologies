@@ -3,7 +3,7 @@ CFLAGS = -Wall -Wextra -Werror -Og -g -std=gnu99 \
 	-Wmissing-prototypes -Wstrict-prototypes -Wold-style-definition # -pedantic -Wconversion
 CFLAGS_TINYEXPR = -ansi -Wall -Wshadow -O2
 
-OBJFILES = name_stack.o param_stack.o graph.o parser.o topologies.o
+OBJFILES = name_stack.o param_stack.o graph.o parser.o topologies.o errors.o
 
 main: main.o libtopologies.so
 	$(CC) -L. -Wl,-rpath=$(CURDIR) $< -o $@ -ltopologies -lm
@@ -21,6 +21,6 @@ tinyexpr.o: tinyexpr.c
 	$(CC) $(CFLAGS_TINYEXPR) -c $^ -o $@
 
 clean:
-	rm -f main *.o
+	rm -f main *.o *.so
 
 .PHONY: clean

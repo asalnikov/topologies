@@ -6,7 +6,7 @@
 graph_t *
 topologies_graph_create (void);
 
-node_t *
+int
 graph_add_node (graph_t *g, char *name, node_type type);
 
 int

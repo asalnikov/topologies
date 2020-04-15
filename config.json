@@ -1,11 +1,4 @@
 [
-{ "module":
-	{ "name": "simple",
-	  "gates": [
-		{ "gate": "2" }
-	  ]
-	}
-},
 
 { "module":
 	{ "name": "net",
@@ -42,6 +35,13 @@
 	}
 },
 
+{ "module":
+	{ "name": "simple",
+	  "gates": [
+		{ "gate": "k" }
+	  ]
+	}
+},
 { "network":
 	{ "module": "net",
 	  "params": []

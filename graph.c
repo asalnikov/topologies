@@ -5,18 +5,25 @@
 
 #include "graph.h"
 #include "defs.h"
+#include "errors.h"
 
 graph_t *
 topologies_graph_create (void)
 {
 	graph_t *g = (graph_t *) malloc(sizeof(graph_t));
+	if (!g)
+		return NULL;
 	g->n_nodes = 0;
 	g->cap_nodes = GRAPH_BLK_SIZE;
 	g->nodes = (node_t *) calloc(g->cap_nodes, sizeof(node_t));
+	if (!g->nodes) {
+		free(g);
+		return NULL;
+	}
 	return g;
 }
 
-node_t *
+int
 graph_add_node (graph_t *g, char *name, node_type type)
 {
 	int i = g->n_nodes;
@@ -24,14 +31,18 @@ graph_add_node (graph_t *g, char *name, node_type type)
 		g->cap_nodes += GRAPH_BLK_SIZE;
 		g->nodes = (node_t *) realloc(g->nodes,
 			g->cap_nodes * sizeof(node_t));
+		if (!g->nodes)
+			return TOP_E_ALLOC;
 	}
 	g->nodes[i].name = (char *) malloc(strlen(name) + 1);
+	if (!g->nodes[i].name)
+		return TOP_E_ALLOC;
 	strncpy(g->nodes[i].name, name, strlen(name) + 1);
 	g->nodes[i].adj = NULL;
 	g->nodes[i].n = i;
 	g->nodes[i].type = type;
 	g->n_nodes++;
-	return &(g->nodes[i]);
+	return 0;
 }
 
 static node_t *
@@ -47,12 +58,16 @@ int
 graph_add_edge_ptr (node_t *node_a, node_t *node_b)
 {
 	if ((node_a == NULL) || (node_b == NULL))
-		return -1;
+		return TOP_E_CONN;
 	node_list_t *l = (node_list_t *) malloc(sizeof(node_list_t));
+	if (!l)
+		return TOP_E_ALLOC;
 	l->next = node_a->adj;
 	l->node = node_b;
 	node_a->adj = l;
 	l = (node_list_t *) malloc(sizeof(node_list_t));
+	if (!l)
+		return TOP_E_ALLOC;
 	l->next = node_b->adj;
 	l->node = node_a;
 	node_b->adj = l;
@@ -66,9 +81,9 @@ graph_add_edge_name (graph_t *g, char *name_a, char *name_b)
 	node_a = graph_find_node(g, name_a);
 	node_b = graph_find_node(g, name_b);
 	if (node_a == NULL)
-		return -1;
+		return TOP_E_CONN;
 	if (node_b == NULL)
-		return -1;
+		return TOP_E_CONN;
 	return graph_add_edge_ptr(node_a, node_b);
 }
 

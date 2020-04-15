@@ -9,14 +9,20 @@
 #include "parser.h"
 #include "param_stack.h"
 #include "defs.h"
+#include "errors.h"
 
 param_stack_t *
 param_stack_create (void)
 {
 	param_stack_t *p = (param_stack_t *) malloc(sizeof(param_stack_t));
+	if (!p) return NULL;
 	p->n = 0;
 	p->cap = PARAM_BLK_SIZE;
 	p->params = (param_t *) calloc(p->cap, sizeof(param_t));
+	if (!p->params) {
+		free(p);
+		return NULL;
+	}
 	return p;
 }
 
@@ -70,7 +76,7 @@ param_stack_eval (param_stack_t *p, char *value, double *rval)
 	int err;
 	te_expr *e = te_compile(value, vars, vars_n, &err);
 	if (e == NULL) {
-		return -1;
+		return TOP_E_EVAL;
 	}
 	*rval = te_eval(e);
 	te_free(e);
@@ -79,33 +85,40 @@ param_stack_eval (param_stack_t *p, char *value, double *rval)
 }
 
 int
-param_stack_enter (param_stack_t *p, raw_param_t *r)
+param_stack_enter (param_stack_t *p, raw_param_t *r, char *e_text, size_t e_size)
 {
 	if (p->n == p->cap) {
 		p->cap += PARAM_BLK_SIZE;
 		p->params = (param_t *) realloc(p->params,
 			p->cap * sizeof(param_t));
+		if (!p->params)
+			return return_error(e_text, e_size, TOP_E_ALLOC, "");
 	}
 
 	/* param stack's lifetime is contained in raw params' lifetime */
 	p->params[p->n].name = r->name;
 	p->n++;
-	return param_stack_eval(p, r->value, &p->params[p->n - 1].value);
+	if (param_stack_eval(p, r->value, &p->params[p->n - 1].value))
+		return return_error(e_text, e_size, TOP_E_EVAL, ": %s", r->value);
+	return 0;
 }
 
-void
+int
 param_stack_enter_val (param_stack_t *p, char *name, int d)
 {
 	if (p->n == p->cap) {
 		p->cap += PARAM_BLK_SIZE;
 		p->params = (param_t *) realloc(p->params,
 			p->cap * sizeof(param_t));
+		if (!p->params)
+			return TOP_E_ALLOC;
 	}
 
 	/* param stack's lifetime is contained in name's lifetime */
 	p->params[p->n].name = name;
 	p->params[p->n].value = d;
 	p->n++;
+	return 0;
 }
 
 void
@@ -124,8 +137,9 @@ param_stack_print (param_stack_t *p, FILE *stream)
 	}
 } */
 
-char *
-eval_conn_name (param_stack_t *p, char *name)
+int
+eval_conn_name (param_stack_t *p, char *name, char **r_name,
+	char *e_text, size_t e_size)
 {
 	int len = strlen(name);
 	char *left, *right;
@@ -138,6 +152,8 @@ eval_conn_name (param_stack_t *p, char *name)
 	}
 
 	int *eval_res = calloc(n_params, sizeof(int));
+	if (!eval_res)
+		return TOP_E_ALLOC;
 	int i = 0;
 	int added_len = 0;
 	double tmp_d;
@@ -147,12 +163,14 @@ eval_conn_name (param_stack_t *p, char *name)
 		right = strchr(left, ']');
 		if (right == NULL) {
 			free(eval_res);
-			return NULL;
+			return return_error(e_text, e_size, TOP_E_EVAL, ": %s", left);
 		}
 		*right = 0;
 		left++;	
-		if (param_stack_eval(p, left, &tmp_d) < 0)
-			return NULL;
+		if (param_stack_eval(p, left, &tmp_d)) {
+			free(eval_res);
+			return return_error(e_text, e_size, TOP_E_EVAL, ": %s", left);
+		}
 		eval_res[i] = lrint(tmp_d);
 		*right = ']';
 		added_len += snprintf(0, 0, "%d", eval_res[i]);
@@ -160,6 +178,10 @@ eval_conn_name (param_stack_t *p, char *name)
 	}
 
 	char *res_str = calloc(len + added_len + 1, sizeof(char));
+	if (!res_str) {
+		free(eval_res);
+		return TOP_E_ALLOC;
+	}
 	char *t = res_str;
 	left = name;
 	char *prev = left;
@@ -175,6 +197,7 @@ eval_conn_name (param_stack_t *p, char *name)
 	}
 	strcpy(t, prev);
 	free(eval_res);
-	return res_str;
+	*r_name = res_str;
+	return 0;
 }
 

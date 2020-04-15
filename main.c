@@ -8,7 +8,6 @@
 
 /* TODO
  * free memory on error
- * error propagation
  * if in connections
  * pass submodule's module as a param
  * distinguish simple and compound modules
@@ -19,7 +18,7 @@
  * param vectors ?
  * rewrite malloc ?
  * strict mode, error on unconnected gates ?
- * connect to next free gate ?
+ * connect to the node's next free gate ?
  *
  * compact network form - in the end
  * exceptions / irregularities - in the end
@@ -40,35 +39,43 @@
  * Also, the following constants are available: pi, e.
 */
 
-static void
-error (const char * errmsg, ...)
-{
-	va_list args;
-	va_start(args, errmsg);
-	fprintf(stderr, errmsg, args);
-	va_end(args);
-	fflush(stdout);
-	exit(EXIT_FAILURE);
-}
 
 int
 main (int argc, char *argv[])
 {
-	void *net = topologies_network_init();
+	void *net;
 	int res;
+	int e_size = 1024;
+	char e_text[1024] = "";
 
-	if (argc < 2)
-		error("usage: %s config.json [config_2.json ...]\n", argv[0]);
+	if (argc < 2) {
+		printf("usage: %s config.json [config_2.json ...]\n", argv[0]);
+		exit(EXIT_FAILURE);
+	}
+
+	if (topologies_network_init(&net, e_text, e_size)) {
+		printf("%s\n", e_text);
+		exit(EXIT_FAILURE);
+	}
 
 	for (int i = 1; i < argc; i++) {
-		if ((res = topologies_network_read_file(net, argv[i])) < 0) {
-			error("%s: invalid JSON data: %d\n", argv[i], res);
+		if ((res = topologies_network_read_file(net, argv[i], e_text, e_size)))
+		{
+			printf("%s\n", e_text);
+			exit(EXIT_FAILURE);
 		}
 	}
 
-	void *graph = topologies_definition_to_graph(net);
+	void *graph;
+	if (topologies_definition_to_graph(net, &graph, e_text, e_size)) {
+		printf("%s\n", e_text);
+		exit(EXIT_FAILURE);
+	}
 	topologies_graph_print(graph, stdout, true);
-	topologies_graph_compact(graph);
+	if (topologies_graph_compact(graph, e_text, e_size)) {
+		printf("%s\n", e_text);
+		exit(EXIT_FAILURE);
+	}
 	topologies_graph_print(graph, stdout, false);
 	topologies_graph_destroy(graph);
 

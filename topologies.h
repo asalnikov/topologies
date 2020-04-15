@@ -1,25 +1,21 @@
 #ifndef TOPOLOGIES_H
 # define TOPOLOGIES_H
 
-void *
-topologies_definition_to_graph (void *net);
+int
+topologies_definition_to_graph (void *v, void **r_g, char *e_text,
+	size_t e_size);
 
-void
-topologies_graph_compact (void *g);
+int
+topologies_graph_compact (void *g, char *e_text, size_t e_size);
 
 void
 topologies_network_destroy (void *n);
 
-void *
-topologies_network_init (void);
+int
+topologies_network_init (void **rnet, char *e_text, size_t e_size);
 
 int
-topologies_network_read_file (void *net, char *filename);
-
-/*
-typedef enum topologies_error {
-
-} topologies_error_t;
-*/
+topologies_network_read_file (void *net, char *filename, char *e_text,
+	size_t e_size);
 
 #endif
