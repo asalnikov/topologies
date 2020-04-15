@@ -167,16 +167,16 @@ traverse_and_add_conns (connection_wrapper_t *c, graph_t *g,
 	int res;
 	if (c->type == CONN_HAS_LOOP) {
 		double tmp_d;
-		if (param_stack_eval(p, c->ptr.loop->start, &tmp_d))
+		if ((res = param_stack_eval(p, c->ptr.loop->start, &tmp_d,
+			e_text, e_size)))
 		{
-			return return_error(e_text, e_size, TOP_E_EVAL,
-				": %s", c->ptr.loop->start);
+			return res;
 		}
 		int start = lrint(tmp_d);
-		if (param_stack_eval(p, c->ptr.loop->end, &tmp_d))
+		if ((res = param_stack_eval(p, c->ptr.loop->end, &tmp_d,
+			e_text, e_size)))
 		{
-			return return_error(e_text, e_size, TOP_E_EVAL,
-				": %s", c->ptr.loop->end);
+			return res;
 		}
 		int end = lrint(tmp_d);
 		if (start > end) {
@@ -220,9 +220,10 @@ expand_module (graph_t *g, module_t *module, network_definition_t *net,
 		}
 		for (int i = 0; i < module->n_gates; i++) {
 			double size_d;
-			if (param_stack_eval(p, module->gates[i].size, &size_d)) {
-				return return_error(e_text, e_size, TOP_E_EVAL,
-					": %s", module->gates[i].size);
+			if ((res = param_stack_eval(p, module->gates[i].size,
+				&size_d, e_text, e_size)))
+			{
+				return res;
 			}
 			int size = lrint(size_d);
 			if (size == 0) {
@@ -249,9 +250,10 @@ expand_module (graph_t *g, module_t *module, network_definition_t *net,
 		/* add gates, add submodules, add connections */
 		for (int i = 0; i < module->n_gates; i++) {
 			double size_d;
-			if (param_stack_eval(p, module->gates[i].size, &size_d)) {
-				return return_error(e_text, e_size, TOP_E_EVAL,
-					": %s", module->gates[i].size);
+			if ((res = param_stack_eval(p, module->gates[i].size,
+				&size_d, e_text, e_size)))
+			{
+				return res;
 			}
 			int size = lrint(size_d);
 			if (size == 0) {

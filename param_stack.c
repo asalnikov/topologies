@@ -32,13 +32,15 @@ param_stack_leave (param_stack_t *p)
 	p->n--;
 }
 
-int
+static int
 param_stack_to_te_vars (param_stack_t *p, te_variable **vars)
 {
 	int VARS_BLK_SIZE = 32;
 	int te_vars_n = 0;
 	int te_vars_cap = VARS_BLK_SIZE;
 	*vars = (te_variable *) calloc(te_vars_cap, sizeof(te_variable));
+	if (*vars == NULL)
+		return -1;
 
 	/* add starting from the tail -- from the most recent */
 	for (int i = p->n - 1; i >= 0; i--) {
@@ -59,6 +61,8 @@ param_stack_to_te_vars (param_stack_t *p, te_variable **vars)
 			te_vars_cap += VARS_BLK_SIZE;
 			*vars = (te_variable *) realloc(*vars,
 				te_vars_cap * sizeof(te_variable));
+			if (*vars == NULL)
+				return -1;
 		}
 		(*vars)[te_vars_n].name = p->params[i].name;
 		(*vars)[te_vars_n].address = &p->params[i].value;
@@ -69,14 +73,17 @@ param_stack_to_te_vars (param_stack_t *p, te_variable **vars)
 }
 
 int
-param_stack_eval (param_stack_t *p, char *value, double *rval)
+param_stack_eval (param_stack_t *p, char *value, double *rval,
+	char *e_text, size_t e_size)
 {
 	te_variable *vars = NULL;
 	int vars_n = param_stack_to_te_vars(p, &vars);
+	if (vars_n < 0)
+		return return_error(e_text, e_size, TOP_E_ALLOC, "");
 	int err;
 	te_expr *e = te_compile(value, vars, vars_n, &err);
 	if (e == NULL) {
-		return TOP_E_EVAL;
+		return return_error(e_text, e_size, TOP_E_EVAL, ": %s", value);
 	}
 	*rval = te_eval(e);
 	te_free(e);
@@ -87,6 +94,7 @@ param_stack_eval (param_stack_t *p, char *value, double *rval)
 int
 param_stack_enter (param_stack_t *p, raw_param_t *r, char *e_text, size_t e_size)
 {
+	int res;
 	if (p->n == p->cap) {
 		p->cap += PARAM_BLK_SIZE;
 		p->params = (param_t *) realloc(p->params,
@@ -98,8 +106,11 @@ param_stack_enter (param_stack_t *p, raw_param_t *r, char *e_text, size_t e_size
 	/* param stack's lifetime is contained in raw params' lifetime */
 	p->params[p->n].name = r->name;
 	p->n++;
-	if (param_stack_eval(p, r->value, &p->params[p->n - 1].value))
-		return return_error(e_text, e_size, TOP_E_EVAL, ": %s", r->value);
+	if ((res = param_stack_eval(p, r->value, &p->params[p->n - 1].value,
+		e_text, e_size)))
+	{
+		return res;
+	}
 	return 0;
 }
 
@@ -157,6 +168,7 @@ eval_conn_name (param_stack_t *p, char *name, char **r_name,
 	int i = 0;
 	int added_len = 0;
 	double tmp_d;
+	int res;
 
 	left = name;
 	while ((left = strchr(left, '[')) != NULL) {
@@ -167,9 +179,9 @@ eval_conn_name (param_stack_t *p, char *name, char **r_name,
 		}
 		*right = 0;
 		left++;	
-		if (param_stack_eval(p, left, &tmp_d)) {
+		if ((res = param_stack_eval(p, left, &tmp_d, e_text, e_size))) {
 			free(eval_res);
-			return return_error(e_text, e_size, TOP_E_EVAL, ": %s", left);
+			return res;
 		}
 		eval_res[i] = lrint(tmp_d);
 		*right = ']';

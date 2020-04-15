@@ -8,10 +8,8 @@ void
 param_stack_leave (param_stack_t *p);
 
 int
-param_stack_to_te_vars (param_stack_t *p, te_variable **vars);
-
-int
-param_stack_eval (param_stack_t *p, char *value, double *rval);
+param_stack_eval (param_stack_t *p, char *value, double *rval,
+	char *e_text, size_t e_size);
 
 int
 param_stack_enter (param_stack_t *p, raw_param_t *r, char *e_text,
