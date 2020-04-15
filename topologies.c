@@ -193,6 +193,21 @@ traverse_and_add_conns (connection_wrapper_t *c, graph_t *g,
 			}
 			param_stack_leave(p);
 		}
+	} else if (c->type == CONN_HAS_COND) {
+		double tmp_d;
+		if ((res = param_stack_eval(p, c->ptr.cond->condition, &tmp_d,
+			e_text, e_size)))
+		{
+			return res;
+		}
+		int condition = lrint(tmp_d);
+		if (condition) {
+			if ((res = traverse_and_add_conns(c->ptr.cond->conn, g,
+				p, s, e_text, e_size)))
+			{
+				return res;
+			}
+		}
 	} else {
 		if ((res = graph_eval_and_add_edge(g, p, s, c, e_text, e_size)))
 			return res;
@@ -511,6 +526,11 @@ free_connection (connection_wrapper_t *c)
 		free(c->ptr.conn->from);
 		free(c->ptr.conn->to);
 		free(c->ptr.conn);
+	} else if (c->type == CONN_HAS_COND) {
+		free_connection(c->ptr.cond->conn);
+		free(c->ptr.cond->conn);
+		free(c->ptr.cond->condition);
+		free(c->ptr.cond);
 	} else {
 		free_connection(c->ptr.loop->conn);
 		free(c->ptr.loop->conn);

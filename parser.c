@@ -153,7 +153,10 @@ parse_connection (int subobj_n, jsmntok_t *tokens, char *text,
 	}
 
 	*i += 1;
-	if (subobj_n == 2) {
+	if ((subobj_n == 2) &&
+		((json_str_eq(text, &tokens[*i], "from")) ||
+		(json_str_eq(text, &tokens[*i], "to"))))
+	{
 		connection->type = CONN_HAS_CONN;
 		connection->ptr.conn = calloc(1, sizeof(connection_plain_t));
 		if (!connection->ptr.conn)
@@ -179,6 +182,50 @@ parse_connection (int subobj_n, jsmntok_t *tokens, char *text,
 					return return_error(e_text, e_size, TOP_E_ALLOC, "");
 				}
 				*i += 2;
+			} else {
+				return bad_token(*i, tokens[*i].type, tokens[*i].start,
+					 text, state, e_text, e_size);
+			}
+		}
+	} else if (subobj_n == 2) {
+		connection->type = CONN_HAS_COND;
+		connection->ptr.cond = calloc(1, sizeof(connection_cond_t));
+		if (!connection->ptr.cond)
+			return return_error(e_text, e_size, TOP_E_ALLOC, "");
+		for (int subobj_i = 0; subobj_i < subobj_n; subobj_i++) {
+			if (json_str_eq(text, &tokens[*i], "if")) {
+				if (connection->ptr.cond->condition != NULL)
+					return bad_token(*i, tokens[*i].type,
+						tokens[*i].start, text,
+						state, e_text, e_size);
+				if (json_str_cpy(text, &tokens[*i + 1],
+					&connection->ptr.cond->condition))
+				{
+					return return_error(e_text, e_size,
+						TOP_E_ALLOC, "");
+				}
+				*i += 2;
+			} else if (json_str_eq(text, &tokens[*i], "conn")) {
+				*i += 1;
+				if ((tokens[*i].type != JSMN_OBJECT) ||
+					(connection->ptr.cond->conn != NULL))
+				{
+					return bad_token(*i, tokens[*i].type,
+						tokens[*i].start,
+						text, state, e_text, e_size);
+				}
+				connection->ptr.cond->conn =
+					calloc(1, sizeof(connection_wrapper_t));
+				if (!connection->ptr.cond->conn)
+					return return_error(e_text, e_size,
+						TOP_E_ALLOC, "");
+				if ((subres = parse_connection(tokens[*i].size,
+					tokens, text,
+					connection->ptr.cond->conn, i,
+					e_text, e_size)) != 0)
+				{
+					return subres;
+				}
 			} else {
 				return bad_token(*i, tokens[*i].type, tokens[*i].start,
 					 text, state, e_text, e_size);
@@ -225,7 +272,6 @@ parse_connection (int subobj_n, jsmntok_t *tokens, char *text,
 				if ((tokens[*i].type != JSMN_OBJECT) ||
 					(connection->ptr.loop->conn != NULL))
 				{
-					printf("###\n");
 					return bad_token(*i, tokens[*i].type,
 						tokens[*i].start,
 						text, state, e_text, e_size);

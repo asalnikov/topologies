@@ -9,7 +9,6 @@
 /* TODO
  * free memory on error
  * check that all allocs are checked
- * if in connections
  * pass submodule's module as a param
  * distinguish simple and compound modules
  * distinguish nodes and routers

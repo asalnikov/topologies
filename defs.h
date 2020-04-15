@@ -66,8 +66,14 @@ typedef struct connection_wrapper connection_wrapper_t;
 
 typedef enum {
 	CONN_HAS_CONN,
-	CONN_HAS_LOOP
+	CONN_HAS_LOOP,
+	CONN_HAS_COND
 } connection_type_t;
+
+typedef struct {
+	char *condition;
+	connection_wrapper_t *conn;
+} connection_cond_t;
 
 typedef struct {
 	char *loop;
@@ -86,6 +92,7 @@ struct connection_wrapper {
 	union {
 		connection_plain_t *conn;
 		connection_loop_t *loop;
+		connection_cond_t *cond;
 	} ptr;
 };
 
