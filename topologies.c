@@ -300,11 +300,18 @@ expand_module (graph_t *g, module_t *module, network_definition_t *net,
 				}
 			}
 			int size;
+			double size_d;
 			if (smodule.size == NULL) {
 				size = 0;
 			} else {
-				sscanf(smodule.size, "%d", &size);
+				if ((res = param_stack_eval(p,
+					smodule.size, &size_d,
+					e_text, e_size)))
+				{
+					return res;
+				}
 			}
+			size = lrint(size_d);
 			if (size > 0) {
 				for (int j = 0; j < size; j++) {
 					if ((res = enter_and_expand_module(net, g, s,
