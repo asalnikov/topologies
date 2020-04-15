@@ -10,7 +10,7 @@
 			"name": "simplevec",
 			"module": "simple",
 			"size": "4",
-			"params": []
+			"params": [ { "x": "6" } ]
 		}
 	  ],
 	  "connections": [
@@ -47,7 +47,7 @@
 },
 { "network":
 	{ "module": "net",
-	  "params": []
+	  "params": [ { "w": "4" } ]
 	}
 }
 ]

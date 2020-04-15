@@ -3,13 +3,13 @@
 
 /* graph */
 
-typedef struct node_list node_list_t;
-
 typedef enum {
 	NODE_NODE,
 	NODE_GATE,
 	NODE_GATE_VISITED
 } node_type;
+
+typedef struct node_list node_list_t;
 
 typedef struct {
 	char *name;

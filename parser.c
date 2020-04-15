@@ -635,6 +635,7 @@ json_deserialize (jsmntok_t *tokens, int n_tokens, char *text,
 					return return_error(e_text, e_size, TOP_E_ALLOC, "");
 			}
 			m[m_i].submodules[arr_i].n_params = subarr_n;
+			i += 1;
 			for (subarr_i = 0; subarr_i < subarr_n; subarr_i++) {
 				if ((tokens[i].type != JSMN_OBJECT) ||
 					(tokens[i].size != 1) ||
@@ -657,7 +658,6 @@ json_deserialize (jsmntok_t *tokens, int n_tokens, char *text,
 				}
 				i += 3;
 			}
-			i += 1;
 			state = STATE_MODULE_SUBMODULE;
 
 		} else if (state == STATE_MODULE_GATE) {
@@ -713,9 +713,13 @@ json_deserialize (jsmntok_t *tokens, int n_tokens, char *text,
 			if (network->params != NULL)
 				return bad_token(i, tokens[i].type, tokens[i].start,
 					text, state, e_text, e_size);
-			if (arr_n > 0)
+			if (arr_n > 0) {
 				network->params = calloc(arr_n, sizeof(raw_param_t));
+				if (!network->params)
+					return return_error(e_text, e_size, TOP_E_ALLOC, "");
+			}
 			network->n_params = arr_n;
+			i += 1;
 			for (arr_i = 0; arr_i < arr_n; arr_i++) {
 				if ((tokens[i].type != JSMN_OBJECT) ||
 					(tokens[i].size != 1) ||
@@ -738,7 +742,6 @@ json_deserialize (jsmntok_t *tokens, int n_tokens, char *text,
 				}
 				i += 3;
 			}
-			i += 1;
 			state = STATE_NETWORK;
 		}
 	} while (i < n_tokens);
