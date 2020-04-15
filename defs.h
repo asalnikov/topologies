@@ -109,6 +109,11 @@ typedef struct {
 	int n_params;
 } submodule_t;
 
+typedef enum {
+	MODULE_COMPOUND,
+	MODULE_SIMPLE
+} module_type_t;
+
 typedef struct {
 	char *name;
 	raw_param_t *params;
@@ -119,6 +124,7 @@ typedef struct {
 	int n_gates;
 	connection_wrapper_t *connections;
 	int n_connections;
+	module_type_t type;
 } module_t;
 
 typedef struct {

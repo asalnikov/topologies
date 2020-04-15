@@ -117,7 +117,6 @@ add_gate (graph_t *g, name_stack_t *s, char *name_s,
 		free(full_name);
 		return return_error(e_text, e_size, TOP_E_ALLOC, "");
 	}
-	// TODO distinguish no mem and bad conn here:
 	if ((res = graph_add_edge_name(g, full_name, name_s))) {
 		if (res == TOP_E_CONN) {
 			return_error(e_text, e_size, TOP_E_CONN,
@@ -224,7 +223,7 @@ expand_module (graph_t *g, module_t *module, network_definition_t *net,
 		if ((res = param_stack_enter(p, &module->params[i], e_text, e_size)))
 			return res;
 	}
-	if (module->submodules == NULL) {
+	if (module->type == MODULE_SIMPLE) {
 		/* add gates and connect them to the node */
 		char *name_s = name_stack_name(s);
 		if (!name_s)

@@ -345,8 +345,15 @@ json_deserialize (jsmntok_t *tokens, int n_tokens, char *text,
 				return bad_token(i, tokens[i].type, tokens[i].start,
 					text, state, e_text, e_size);
 			}
-			if (json_str_eq(text, &tokens[i + 1], "module")) {
+			if (json_str_eq(text, &tokens[i + 1], "module") ||
+				json_str_eq(text, &tokens[i + 1], "simplemodule"))
+			{
 				m_i += 1;
+				if (json_str_eq(text, &tokens[i + 1], "module")) {
+					m[m_i].type = MODULE_COMPOUND;
+				} else {
+					m[m_i].type = MODULE_SIMPLE;
+				}
 				state = STATE_MODULE;
 				i += 2;
 				if (tokens[i].type != JSMN_OBJECT)

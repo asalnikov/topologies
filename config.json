@@ -38,7 +38,7 @@
 	}
 },
 
-{ "module":
+{ "simplemodule":
 	{ "name": "simple",
 	  "gates": [
 		{ "gate": "k" }

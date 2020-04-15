@@ -10,7 +10,6 @@
  * free memory on error
  * check that all allocs are checked
  * pass submodule's module as a param
- * distinguish simple and compound modules
  * distinguish nodes and routers
  * cartesian product https://en.wikipedia.org/wiki/Cartesian_product_of_graphs
  ** compact the subgraph before computing product
