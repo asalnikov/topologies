@@ -95,14 +95,14 @@ topologies_graph_print (graph_t *g, FILE *stream, bool print_gate_nodes)
 	for (int i = 0; i < g->n_nodes; i++) {
 		if ((g->nodes[i].type == NODE_NODE) || print_gate_nodes)
 			fprintf(stream, "n%d [label=\"%s\"];\n",
-			        i, g->nodes[i].name);
+				i, g->nodes[i].name);
 	}
 	for (int i = 0; i < g->n_nodes; i++) {
 		l = g->nodes[i].adj;
 		while (l != NULL) {
 				if (i < l->node->n)
 					fprintf(stream, "n%d -- n%d;\n",
-					        i, l->node->n);
+						i, l->node->n);
 			l = l->next;
 		}
 	}

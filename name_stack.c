@@ -108,7 +108,7 @@ get_full_name (name_stack_t *s, char *name, int index)
 	strncpy(full_name, name_s, strlen(name_s));
 	full_name[strlen(name_s)] = '.';
 	strncpy(full_name + strlen(name_s) + 1, name,
-	        strlen(name) + 1);
+		strlen(name) + 1);
 	if (index != -1) {
 		snprintf(full_name + strlen(name_s) + strlen(name) + 1,
 			added_len + 1, "[%d]", index);

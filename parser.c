@@ -165,7 +165,7 @@ parse_connection (int subobj_n, jsmntok_t *tokens, char *text,
 			if (json_str_eq(text, &tokens[*i], "from")) {
 				if (connection->ptr.conn->from != NULL)
 					return bad_token(*i, tokens[*i].type,
-						  tokens[*i].start, text, state, e_text, e_size);
+						tokens[*i].start, text, state, e_text, e_size);
 				if (json_str_cpy(text, &tokens[*i + 1],
 					&connection->ptr.conn->from))
 				{
@@ -175,7 +175,7 @@ parse_connection (int subobj_n, jsmntok_t *tokens, char *text,
 			} else if (json_str_eq(text, &tokens[*i], "to")) {
 				if (connection->ptr.conn->to != NULL)
 					return bad_token(*i, tokens[*i].type,
-						  tokens[*i].start, text, state, e_text, e_size);
+						tokens[*i].start, text, state, e_text, e_size);
 				if (json_str_cpy(text, &tokens[*i + 1],
 					&connection->ptr.conn->to))
 				{
@@ -240,7 +240,7 @@ parse_connection (int subobj_n, jsmntok_t *tokens, char *text,
 			if (json_str_eq(text, &tokens[*i], "start")) {
 				if (connection->ptr.loop->start != NULL)
 					return bad_token(*i, tokens[*i].type,
-						  tokens[*i].start, text, state, e_text, e_size);
+						tokens[*i].start, text, state, e_text, e_size);
 				if (json_str_cpy(text, &tokens[*i + 1],
 					&connection->ptr.loop->start))
 				{
@@ -250,7 +250,7 @@ parse_connection (int subobj_n, jsmntok_t *tokens, char *text,
 			} else if (json_str_eq(text, &tokens[*i], "end")) {
 				if (connection->ptr.loop->end != NULL)
 					return bad_token(*i, tokens[*i].type,
-						  tokens[*i].start, text, state, e_text, e_size);
+						tokens[*i].start, text, state, e_text, e_size);
 				if (json_str_cpy(text, &tokens[*i + 1],
 					&connection->ptr.loop->end))
 				{
@@ -260,7 +260,7 @@ parse_connection (int subobj_n, jsmntok_t *tokens, char *text,
 			} else if (json_str_eq(text, &tokens[*i], "loop")) {
 				if (connection->ptr.loop->loop != NULL)
 					return bad_token(*i, tokens[*i].type,
-						  tokens[*i].start, text, state, e_text, e_size);
+						tokens[*i].start, text, state, e_text, e_size);
 				if (json_str_cpy(text, &tokens[*i + 1],
 					&connection->ptr.loop->loop))
 				{

@@ -25,19 +25,19 @@ file_map (char *filename, char **addr, off_t *off, char *e_text, size_t e_size)
 	int fd = open(filename, O_RDONLY);
 	if (fd < 0) {
 		return return_error(e_text, e_size, TOP_E_FOPEN, " %s: %s",
-		                    filename, strerror(errno));
+			filename, strerror(errno));
 	}
 
 	struct stat st;
 	if (fstat(fd, &st) < 0) {
 		return return_error(e_text, e_size, TOP_E_FSTAT,
-		                    " %s: %s", filename, strerror(errno));
+			" %s: %s", filename, strerror(errno));
 	}
 
 	*addr = mmap(0, st.st_size, PROT_READ, MAP_PRIVATE, fd, 0);
 	if (*addr == MAP_FAILED) {
 		return return_error(e_text, e_size, TOP_E_FMMAP,
-		                    " %s: %s", filename, strerror(errno));
+			" %s: %s", filename, strerror(errno));
 	}
 
 	close(fd);
@@ -107,7 +107,7 @@ find_module (network_definition_t *net, char *name)
 
 static int
 add_gate (graph_t *g, name_stack_t *s, char *name_s,
-          gate_t *gate, int j, char *e_text, size_t e_size)
+	gate_t *gate, int j, char *e_text, size_t e_size)
 {
 	int res;
 	char *full_name = get_full_name(s, gate->name, j);
@@ -561,9 +561,7 @@ topologies_network_destroy (void *v)
 					free(n->modules[i].submodules[j].module);
 					free(n->modules[i].submodules[j].size);
 					if (n->modules[i].submodules[j].params) {
-						for (int k = 0; 
-						     k < n->modules[i].submodules[j].n_params;
-						     k++)
+						for (int k = 0; k < n->modules[i].submodules[j].n_params; k++)
 						{
 							free(n->modules[i].submodules[j].params[k].name);
 							free(n->modules[i].submodules[j].params[k].value);
