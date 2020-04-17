@@ -400,154 +400,32 @@ topologies_definition_to_graph (void *v, void **r_g, char *e_text, size_t e_size
 	return 0;
 }
 
-/*
-static int
-graph_node_neighbors (node_t *gate, node_t **node_1, node_t **node_2,
-	char *e_text, size_t e_size)
-{
-	(void) e_text;
-	(void) e_size;
-	// TODO error ^
-	node_list_t *l = gate->adj;
-	*node_1 = NULL;
-	*node_2 = NULL;
-	//printf("# %s %d ##\n", gate->name, gate->type);
-	while (l != NULL) {
-		if (*node_1 == NULL) {
-			//printf("##1 %s %d ##\n", l->node->name, gate->type);
-			*node_1 = l->node;
-		} else if (*node_2 == NULL) {
-			//printf("##2 %s %d ##\n", l->node->name, gate->type);
-			*node_2 = l->node;
-		//} else {
-			//printf("##3 %s %d ##\n", l->node->name, gate->type);
-		}
-		l = l->next;
-	}
-	return 0;
-}*/
-
-/*static int
-graph_traverse_gate_neighbors (node_t *gate, node_t *node_a, node_t **r_node,
-	char *e_text, size_t e_size)
-{
-	int res;
-	node_t *node_ta, *node_tb, *node_prev;
-	if (node_a != NULL) {
-		node_prev = gate;
-		while (node_a->type != NODE_NODE) {
-			node_a->type = NODE_GATE_VISITED;
-			if ((res = graph_gate_neighbors(node_a, &node_ta, &node_tb,
-				e_text, e_size)))
-			{
-				return res;
-			}
-			if ((node_ta == NULL) || (node_tb == NULL)) break;
-			if (node_ta != node_prev) {
-				node_prev = node_a;
-				node_a = node_ta;
-			} else {
-				node_prev = node_a;
-				node_a = node_tb;
-			}
-		}
-	}
-
-	*r_node = node_a;
-	return 0;
-}*/
-
-/*static int
-graph_gate_connects_whom (node_t *gate, node_t **n_node_1, node_t **n_node_2,
-	char *e_text, size_t e_size)
-{
-	int res;
-	node_t *node_a, *node_b;
-	gate->type = NODE_GATE_VISITED;
-	if ((res = graph_node_neighbors(gate, &node_a, &node_b, e_text, e_size)))
-		return res;
-	node_t *tmp_a, *tmp_b;
-	while (node_a != NULL) {
-		node_a->type = NODE_GATE_VISITED;
-		if ((res = graph_node_neighbors(node_a, &tmp_a, &tmp_b, e_text, e_size)))
-			return res;
-		if (tmp_b == NULL) break;
-		if (tmp_a->type == NODE_NODE) {
-			node_a = tmp_a;
-			break;
-		}
-		if (tmp_b->type == NODE_NODE) {
-			node_a = tmp_b;
-			break;
-		}
-		if (tmp_a->type == NODE_GATE_VISITED) {
-			node_a = tmp_b;
-		} else {
-			node_a = tmp_a;
-		}
-	}
-	while (node_b != NULL) {
-		node_b->type = NODE_GATE_VISITED;
-		if ((res = graph_node_neighbors(node_b, &tmp_a, &tmp_b, e_text, e_size)))
-			return res;
-		if (tmp_b == NULL) break;
-		if (tmp_a->type == NODE_NODE) {
-			node_b = tmp_a;
-			break;
-		}
-		if (tmp_b->type == NODE_NODE) {
-			node_b = tmp_b;
-			break;
-		}
-		if (tmp_a->type == NODE_GATE_VISITED) {
-			node_b = tmp_b;
-		} else {
-			node_b = tmp_a;
-		}
-	}
-	//
-	if ((res = graph_traverse_gate_neighbors(gate, node_a, n_node_1,
-		e_text, e_size)))
-	{
-		return res;
-	}
-	if ((res = graph_traverse_gate_neighbors(gate, node_b, n_node_2,
-		e_text, e_size)))
-	{
-		return res;
-	}
-	//
-	*n_node_1 = node_a;
-	*n_node_2 = node_b;
-	if (node_a == NULL) *n_node_1 = gate;
-	if (node_b == NULL) *n_node_2 = gate;
-	return 0;
-}*/
-
 static node_t *
-graph_find_end_and_mark (graph_t *g, int n)
+graph_find_end_and_mark (graph_t *g, int prev, int n)
 {
 	node_t *node_tmp;
 	node_t *to = &(g->nodes[n]);
 
 	node_tmp = to;
 	while (node_tmp != NULL) {
-		if (g->nodes[node_tmp->adj->n].type == NODE_GATE) {
+		if (g->nodes[node_tmp->adj[0]].type == NODE_GATE) {
 			node_tmp->type = NODE_GATE_VISITED;
-			node_tmp = &(g->nodes[node_tmp->adj->n]);
-		} else if (g->nodes[node_tmp->adj->n].type == NODE_NODE) {
+			node_tmp = &(g->nodes[node_tmp->adj[0]]);
+		} else if ((g->nodes[node_tmp->adj[0]].type == NODE_NODE) &&
+			(node_tmp->adj[0] != prev))
+		{
 			node_tmp->type = NODE_GATE_VISITED;
-			node_tmp = &(g->nodes[node_tmp->adj->n]);
+			node_tmp = &(g->nodes[node_tmp->adj[0]]);
 			break;
-		} else if (g->nodes[node_tmp->adj->n].type == NODE_GATE_VISITED) {
-			if (node_tmp->adj->next == NULL) {
+		} else {
+			if (node_tmp->n_adj == 1) {
 				break;
-			} else if (g->nodes[node_tmp->adj->next->n].type == NODE_GATE) {
+			} else if (g->nodes[node_tmp->adj[1]].type == NODE_GATE) {
 				node_tmp->type = NODE_GATE_VISITED;
-				node_tmp = &(g->nodes[node_tmp->adj->next->n]);
+				node_tmp = &(g->nodes[node_tmp->adj[1]]);
 			} else {
 				node_tmp->type = NODE_GATE_VISITED;
-				node_tmp = &(g->nodes[node_tmp->adj->next->n]);
+				node_tmp = &(g->nodes[node_tmp->adj[1]]);
 				break;
 			}
 		}
@@ -557,11 +435,11 @@ graph_find_end_and_mark (graph_t *g, int n)
 }
 
 int
-topologies_graph_compact (void *v, char *e_text, size_t e_size)
+topologies_graph_compact (void **v, char *e_text, size_t e_size)
 {
-	//int res;
-	node_t *node_a;
-	graph_t *g = (graph_t *) v;
+	int res;
+	node_t *node_a, *node_b;
+	graph_t *g = (graph_t *) *v;
 	graph_t *new_g = topologies_graph_create();
 	if (new_g == NULL)
 		return return_error(e_text, e_size, TOP_E_ALLOC, "");
@@ -570,61 +448,45 @@ topologies_graph_compact (void *v, char *e_text, size_t e_size)
 		if (g->nodes[i].type != NODE_NODE)
 			continue;
 
-		for (node_list_t *l = g->nodes[i].adj; l != NULL; l = l->next) {
-			if (g->nodes[l->n].type == NODE_GATE) {
-				node_a = graph_find_end_and_mark(g, l->n);
-				graph_add_edge_ptr(node_a, &g->nodes[i]);
+		for (int j = 0; j < g->nodes[i].n_adj; j++) {
+			if (g->nodes[g->nodes[i].adj[j]].type == NODE_GATE) {
+				node_a = graph_find_end_and_mark(g, i, g->nodes[i].adj[j]);
+				if (!graph_are_adjacent(node_a, &g->nodes[i])) {
+					if ((res = graph_add_edge_ptr(node_a,
+						&g->nodes[i])))
+					{
+						return return_error(e_text,
+							e_size, res, "");
+					}
+				}
 			}
 		}
 	}
 
-	/* connect nodes with nodes */
-	/*
 	for (int i = 0; i < g->n_nodes; i++) {
-		if (g->nodes[i].type == NODE_NODE) continue;
-3
-		node_t *n_node_1 = NULL, *n_node_2 = NULL;
-		if ((res = graph_gate_connects_whom(&g->nodes[i],
-			&n_node_1, &n_node_2, e_text, e_size)))
-		{
-			return res;
+		if (g->nodes[i].type == NODE_GATE_VISITED)
+			continue;
+		graph_add_node(new_g, g->nodes[i].name, g->nodes[i].type);
+	}
+	for (int i = 0; i < g->n_nodes; i++) {
+		if (g->nodes[i].type == NODE_GATE_VISITED)
+			continue;
+		for (int j = 0; j < g->nodes[i].n_adj; j++) {
+			if ((i < g->nodes[i].adj[j]) &&
+				(g->nodes[g->nodes[i].adj[j]].type !=
+				NODE_GATE_VISITED))
+			{
+				node_a = graph_find_node(new_g,
+					g->nodes[i].name);
+				node_b = graph_find_node(new_g,
+					g->nodes[g->nodes[i].adj[j]].name);
+				graph_add_edge_ptr(node_a, node_b);
+			}
 		}
-		printf("### %s %s %s ###\n", g->nodes[i].name, n_node_1->name, n_node_2->name);
-		if ((n_node_1 != NULL) && (n_node_2 != NULL) &&
-			(n_node_1->n > n_node_2->n))
-		{
-			if (graph_add_edge_ptr(n_node_1, n_node_2))
-				return return_error(e_text, e_size, TOP_E_ALLOC, "");
+	}
+	topologies_graph_destroy(g);
+	*v = (void *) new_g;
 
-		}
-	}*/
-	/* disconnect gates */
-	/*
-	node_list_t *l, *l_next;
-	for (int i = 0; i < g->n_nodes; i++) {
-		if (g->nodes[i].type != NODE_NODE) {
-			l = g->nodes[i].adj;
-			while (l != NULL) {
-				l_next = l->next;
-				free(l);
-				l = l_next;
-			}
-			g->nodes[i].adj = NULL;
-		} else {
-			l = g->nodes[i].adj;
-			node_list_t **prev = &g->nodes[i].adj;
-			while (l != NULL) {
-				l_next = l->next;
-				if (l->node->type != NODE_NODE) {
-					free(l);
-					*prev = l_next;
-				} else {
-					prev = &l->next;
-				}
-				l = l_next;
-			}
-		}
-	}*/
 	return 0;
 }
 

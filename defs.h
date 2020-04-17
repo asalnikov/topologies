@@ -9,19 +9,14 @@ typedef enum {
 	NODE_GATE_VISITED
 } node_type;
 
-typedef struct node_list node_list_t;
-
 typedef struct {
 	char *name;
-	node_list_t *adj;
 	int n;
+	int *adj;
+	int n_adj;
+	int cap_adj;
 	node_type type;
 } node_t;
-
-struct node_list {
-	int n;
-	node_list_t *next;
-}; // TODO replace list by array
 
 typedef struct {
 	node_t *nodes;
@@ -30,6 +25,7 @@ typedef struct {
 } graph_t;
 
 enum { GRAPH_BLK_SIZE = 32 };
+enum { ADJ_BLK_SIZE = 8 };
 
 /* name stack */
 

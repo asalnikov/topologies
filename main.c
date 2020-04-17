@@ -71,7 +71,7 @@ main (int argc, char *argv[])
 		exit(EXIT_FAILURE);
 	}
 	topologies_graph_print(graph, stdout, true);
-	if (topologies_graph_compact(graph, e_text, e_size)) {
+	if (topologies_graph_compact(&graph, e_text, e_size)) {
 		printf("%s\n", e_text);
 		exit(EXIT_FAILURE);
 	}

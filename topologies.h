@@ -6,7 +6,7 @@ topologies_definition_to_graph (void *v, void **r_g, char *e_text,
 	size_t e_size);
 
 int
-topologies_graph_compact (void *g, char *e_text, size_t e_size);
+topologies_graph_compact (void **g, char *e_text, size_t e_size);
 
 void
 topologies_network_destroy (void *n);
