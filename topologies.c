@@ -400,14 +400,21 @@ topologies_definition_to_graph (void *v, void **r_g, char *e_text, size_t e_size
 	return 0;
 }
 
-static node_t *
-graph_find_end_and_mark (graph_t *g, int prev, int n)
+static int
+graph_find_end_and_mark (graph_t *g, int prev, int n, node_t **node_res,
+	char *e_text, size_t e_size)
 {
 	node_t *node_tmp;
 	node_t *to = &(g->nodes[n]);
 
 	node_tmp = to;
 	while (node_tmp != NULL) {
+		if ((node_tmp->type != NODE_NODE) &&
+			(node_tmp->n_adj > 2))
+		{
+			return return_error(e_text,
+				e_size, TOP_E_BADGATE, ": %s", node_tmp->name);
+		}
 		if (g->nodes[node_tmp->adj[0]].type == NODE_GATE) {
 			node_tmp->type = NODE_GATE_VISITED;
 			node_tmp = &(g->nodes[node_tmp->adj[0]]);
@@ -431,7 +438,8 @@ graph_find_end_and_mark (graph_t *g, int prev, int n)
 		}
 	}
 
-	return node_tmp;
+	*node_res = node_tmp;
+	return 0;
 }
 
 int
@@ -450,11 +458,17 @@ topologies_graph_compact (void **v, char *e_text, size_t e_size)
 
 		for (int j = 0; j < g->nodes[i].n_adj; j++) {
 			if (g->nodes[g->nodes[i].adj[j]].type == NODE_GATE) {
-				node_a = graph_find_end_and_mark(g, i, g->nodes[i].adj[j]);
+				res = graph_find_end_and_mark(g, i,
+					g->nodes[i].adj[j], &node_a, e_text, e_size);
+				if (res) {
+					topologies_graph_destroy(new_g);
+					return res;
+				}
 				if (!graph_are_adjacent(node_a, &g->nodes[i])) {
 					if ((res = graph_add_edge_ptr(node_a,
 						&g->nodes[i])))
 					{
+						topologies_graph_destroy(new_g);
 						return return_error(e_text,
 							e_size, res, "");
 					}
@@ -465,6 +479,8 @@ topologies_graph_compact (void **v, char *e_text, size_t e_size)
 
 	for (int i = 0; i < g->n_nodes; i++) {
 		if (g->nodes[i].type == NODE_GATE_VISITED)
+			continue;
+		if (g->nodes[i].n_adj == 0)
 			continue;
 		graph_add_node(new_g, g->nodes[i].name, g->nodes[i].type);
 	}

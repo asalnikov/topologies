@@ -8,7 +8,6 @@
 
 /* TODO
  * free memory on error
- * check that all allocs are checked
  * distinguish nodes and routers
  * cartesian product https://en.wikipedia.org/wiki/Cartesian_product_of_graphs
  ** compact the subgraph before computing product
