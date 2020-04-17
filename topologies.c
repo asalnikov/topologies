@@ -566,6 +566,7 @@ topologies_network_destroy (void *v)
 				free(n->network->params[i].name);
 				free(n->network->params[i].value);
 			}
+			free(n->network->params);
 		}
 		free(n->network->module);
 		free(n->network);
