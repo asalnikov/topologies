@@ -400,28 +400,34 @@ topologies_definition_to_graph (void *v, void **r_g, char *e_text, size_t e_size
 	return 0;
 }
 
+/*
 static int
-graph_gate_neighbors (node_t *gate, node_t **node_1, node_t **node_2,
+graph_node_neighbors (node_t *gate, node_t **node_1, node_t **node_2,
 	char *e_text, size_t e_size)
 {
+	(void) e_text;
+	(void) e_size;
+	// TODO error ^
 	node_list_t *l = gate->adj;
 	*node_1 = NULL;
 	*node_2 = NULL;
+	//printf("# %s %d ##\n", gate->name, gate->type);
 	while (l != NULL) {
 		if (*node_1 == NULL) {
+			//printf("##1 %s %d ##\n", l->node->name, gate->type);
 			*node_1 = l->node;
 		} else if (*node_2 == NULL) {
+			//printf("##2 %s %d ##\n", l->node->name, gate->type);
 			*node_2 = l->node;
-		} else {
-			return return_error(e_text, e_size, TOP_E_BADGATE,
-				" %s", gate->name);
+		//} else {
+			//printf("##3 %s %d ##\n", l->node->name, gate->type);
 		}
 		l = l->next;
 	}
 	return 0;
-}
+}*/
 
-static int
+/*static int
 graph_traverse_gate_neighbors (node_t *gate, node_t *node_a, node_t **r_node,
 	char *e_text, size_t e_size)
 {
@@ -449,17 +455,57 @@ graph_traverse_gate_neighbors (node_t *gate, node_t *node_a, node_t **r_node,
 
 	*r_node = node_a;
 	return 0;
-}
+}*/
 
-static int
+/*static int
 graph_gate_connects_whom (node_t *gate, node_t **n_node_1, node_t **n_node_2,
 	char *e_text, size_t e_size)
 {
 	int res;
 	node_t *node_a, *node_b;
 	gate->type = NODE_GATE_VISITED;
-	if ((res = graph_gate_neighbors(gate, &node_a, &node_b, e_text, e_size)))
+	if ((res = graph_node_neighbors(gate, &node_a, &node_b, e_text, e_size)))
 		return res;
+	node_t *tmp_a, *tmp_b;
+	while (node_a != NULL) {
+		node_a->type = NODE_GATE_VISITED;
+		if ((res = graph_node_neighbors(node_a, &tmp_a, &tmp_b, e_text, e_size)))
+			return res;
+		if (tmp_b == NULL) break;
+		if (tmp_a->type == NODE_NODE) {
+			node_a = tmp_a;
+			break;
+		}
+		if (tmp_b->type == NODE_NODE) {
+			node_a = tmp_b;
+			break;
+		}
+		if (tmp_a->type == NODE_GATE_VISITED) {
+			node_a = tmp_b;
+		} else {
+			node_a = tmp_a;
+		}
+	}
+	while (node_b != NULL) {
+		node_b->type = NODE_GATE_VISITED;
+		if ((res = graph_node_neighbors(node_b, &tmp_a, &tmp_b, e_text, e_size)))
+			return res;
+		if (tmp_b == NULL) break;
+		if (tmp_a->type == NODE_NODE) {
+			node_b = tmp_a;
+			break;
+		}
+		if (tmp_b->type == NODE_NODE) {
+			node_b = tmp_b;
+			break;
+		}
+		if (tmp_a->type == NODE_GATE_VISITED) {
+			node_b = tmp_b;
+		} else {
+			node_b = tmp_a;
+		}
+	}
+	//
 	if ((res = graph_traverse_gate_neighbors(gate, node_a, n_node_1,
 		e_text, e_size)))
 	{
@@ -470,25 +516,80 @@ graph_gate_connects_whom (node_t *gate, node_t **n_node_1, node_t **n_node_2,
 	{
 		return res;
 	}
+	//
+	*n_node_1 = node_a;
+	*n_node_2 = node_b;
+	if (node_a == NULL) *n_node_1 = gate;
+	if (node_b == NULL) *n_node_2 = gate;
 	return 0;
+}*/
+
+static node_t *
+graph_find_end_and_mark (graph_t *g, int n)
+{
+	node_t *node_tmp;
+	node_t *to = &(g->nodes[n]);
+
+	node_tmp = to;
+	while (node_tmp != NULL) {
+		if (g->nodes[node_tmp->adj->n].type == NODE_GATE) {
+			node_tmp->type = NODE_GATE_VISITED;
+			node_tmp = &(g->nodes[node_tmp->adj->n]);
+		} else if (g->nodes[node_tmp->adj->n].type == NODE_NODE) {
+			node_tmp->type = NODE_GATE_VISITED;
+			node_tmp = &(g->nodes[node_tmp->adj->n]);
+			break;
+		} else if (g->nodes[node_tmp->adj->n].type == NODE_GATE_VISITED) {
+			if (node_tmp->adj->next == NULL) {
+				break;
+			} else if (g->nodes[node_tmp->adj->next->n].type == NODE_GATE) {
+				node_tmp->type = NODE_GATE_VISITED;
+				node_tmp = &(g->nodes[node_tmp->adj->next->n]);
+			} else {
+				node_tmp->type = NODE_GATE_VISITED;
+				node_tmp = &(g->nodes[node_tmp->adj->next->n]);
+				break;
+			}
+		}
+	}
+
+	return node_tmp;
 }
 
 int
 topologies_graph_compact (void *v, char *e_text, size_t e_size)
 {
-	int res;
+	//int res;
+	node_t *node_a;
 	graph_t *g = (graph_t *) v;
-	node_list_t *l, *l_next;
-	/* connect nodes with nodes */
-	for (int i = 0; i < g->n_nodes; i++) {
-		if (g->nodes[i].type != NODE_GATE) continue;
+	graph_t *new_g = topologies_graph_create();
+	if (new_g == NULL)
+		return return_error(e_text, e_size, TOP_E_ALLOC, "");
 
+	for (int i = 0; i < g->n_nodes; i++) {
+		if (g->nodes[i].type != NODE_NODE)
+			continue;
+
+		for (node_list_t *l = g->nodes[i].adj; l != NULL; l = l->next) {
+			if (g->nodes[l->n].type == NODE_GATE) {
+				node_a = graph_find_end_and_mark(g, l->n);
+				graph_add_edge_ptr(node_a, &g->nodes[i]);
+			}
+		}
+	}
+
+	/* connect nodes with nodes */
+	/*
+	for (int i = 0; i < g->n_nodes; i++) {
+		if (g->nodes[i].type == NODE_NODE) continue;
+3
 		node_t *n_node_1 = NULL, *n_node_2 = NULL;
 		if ((res = graph_gate_connects_whom(&g->nodes[i],
 			&n_node_1, &n_node_2, e_text, e_size)))
 		{
 			return res;
 		}
+		printf("### %s %s %s ###\n", g->nodes[i].name, n_node_1->name, n_node_2->name);
 		if ((n_node_1 != NULL) && (n_node_2 != NULL) &&
 			(n_node_1->n > n_node_2->n))
 		{
@@ -496,8 +597,10 @@ topologies_graph_compact (void *v, char *e_text, size_t e_size)
 				return return_error(e_text, e_size, TOP_E_ALLOC, "");
 
 		}
-	}
+	}*/
 	/* disconnect gates */
+	/*
+	node_list_t *l, *l_next;
 	for (int i = 0; i < g->n_nodes; i++) {
 		if (g->nodes[i].type != NODE_NODE) {
 			l = g->nodes[i].adj;
@@ -521,7 +624,7 @@ topologies_graph_compact (void *v, char *e_text, size_t e_size)
 				l = l_next;
 			}
 		}
-	}
+	}*/
 	return 0;
 }
 

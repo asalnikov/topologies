@@ -19,9 +19,9 @@ typedef struct {
 } node_t;
 
 struct node_list {
-	node_t *node;
+	int n;
 	node_list_t *next;
-};
+}; // TODO replace list by array
 
 typedef struct {
 	node_t *nodes;

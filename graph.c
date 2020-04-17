@@ -63,13 +63,13 @@ graph_add_edge_ptr (node_t *node_a, node_t *node_b)
 	if (!l)
 		return TOP_E_ALLOC;
 	l->next = node_a->adj;
-	l->node = node_b;
+	l->n = node_b->n;
 	node_a->adj = l;
 	l = (node_list_t *) malloc(sizeof(node_list_t));
 	if (!l)
 		return TOP_E_ALLOC;
 	l->next = node_b->adj;
-	l->node = node_a;
+	l->n = node_a->n;
 	node_b->adj = l;
 	return 0;
 }
@@ -100,9 +100,9 @@ topologies_graph_print (graph_t *g, FILE *stream, bool print_gate_nodes)
 	for (int i = 0; i < g->n_nodes; i++) {
 		l = g->nodes[i].adj;
 		while (l != NULL) {
-				if (i < l->node->n)
+				if (i < l->n)
 					fprintf(stream, "n%d -- n%d;\n",
-						i, l->node->n);
+						i, l->n);
 			l = l->next;
 		}
 	}
