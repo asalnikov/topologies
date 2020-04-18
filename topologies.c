@@ -145,7 +145,6 @@ enter_and_expand_module (network_definition_t *net, graph_t *g,
 	int res;
 	if (name_stack_enter(s, smodule->name, j))
 		return return_error(e_text, e_size, TOP_E_ALLOC, "");
-	// TODO check j
 	module_t *module = find_module(net, smodule->module);
 	if (module == NULL) {
 		name_stack_leave(s);
@@ -221,7 +220,7 @@ graphs_product (graph_t *g_a, graph_t *g_b, graph_t *g_prod,
 {
 	// TODO propagate errors
 	int name_len;
-	int name_buf_blk = 32; // TODO test
+	int name_buf_blk = 32;
 	int name_buf_cap = name_buf_blk;
 	char *name_buf = malloc(name_buf_cap);
 	if (!name_buf)
@@ -246,7 +245,8 @@ graphs_product (graph_t *g_a, graph_t *g_b, graph_t *g_prod,
 
 			sprintf(name_buf, "(%s,%s)", g_a->nodes[i].name,
 				g_b->nodes[j].name);
-			graph_add_node(g_prod, name_buf, NODE_NODE);
+			if (graph_add_node(g_prod, name_buf, NODE_NODE))
+				return return_error(e_text, e_size, TOP_E_ALLOC, "");
 
 			// TODO add gates here
 		}
@@ -292,6 +292,8 @@ graphs_product (graph_t *g_a, graph_t *g_b, graph_t *g_prod,
 		}
 	}
 
+	free(name_buf);
+	free(name_buf_neigh);
 	return 0;
 }
 
@@ -299,26 +301,57 @@ static int
 graph_insert (graph_t *g, graph_t *g_prod, name_stack_t *s,
 	char *e_text, size_t e_size)
 {
-	// TODO use name stack
 	(void) s;
 	int res;
+	char *stack_name = name_stack_name(s);
+	if (!stack_name) return return_error(e_text, e_size, TOP_E_ALLOC, "");
+	printf("# %s\n", stack_name);
+
+	int name_buf_blk = 32;
+	int name_buf_cap = name_buf_blk;
+	char *name_buf = malloc(name_buf_cap);
+	if (!name_buf)
+		return return_error(e_text, e_size, TOP_E_ALLOC, "");
+
 	for (int i = 0; i < g_prod->n_nodes; i++) {
-		if (graph_add_node(g, g_prod->nodes[i].name,
+		int name_len = strlen(g_prod->nodes[i].name) +
+			strlen(stack_name) + 2;
+		if (name_buf_cap < name_len) {
+			name_buf_cap = (1 + name_len / name_buf_blk) *
+				name_buf_blk;
+			name_buf = realloc(name_buf, name_buf_cap);
+			if (!name_buf) {
+				return return_error(e_text, e_size,
+					TOP_E_ALLOC, "");
+			}
+		}
+		sprintf(name_buf, "%s.%s", stack_name, g_prod->nodes[i].name);
+
+		if (graph_add_node(g, name_buf,
 			g_prod->nodes[i].type))
 		{
 			return return_error(e_text, e_size, TOP_E_ALLOC, "");
 		}
 	}
+
+	char *name_buf_2 = malloc(name_buf_cap);
+	if (!name_buf_2)
+		return return_error(e_text, e_size, TOP_E_ALLOC, "");
 	for (int i = 0; i < g_prod->n_nodes; i++) {
 		for (int j = 0; j < g_prod->nodes[i].n_adj; j++) {
 			if (i < g_prod->nodes[i].adj[j]) continue;
-			if ((res = graph_add_edge_name(g, g_prod->nodes[i].name,
-				g_prod->nodes[g_prod->nodes[i].adj[j]].name)))
+			sprintf(name_buf, "%s.%s", stack_name, g_prod->nodes[i].name);
+			sprintf(name_buf_2, "%s.%s", stack_name, g_prod->nodes[g_prod->nodes[i].adj[j]].name);
+			if ((res = graph_add_edge_name(g, name_buf,
+				name_buf_2)))
 			{
 				return return_error(e_text, e_size, res, "");
 			}
 		}
 	}
+	free(stack_name);
+	free(name_buf);
+	free(name_buf_2);
 	return 0;
 }
 
@@ -647,7 +680,8 @@ topologies_graph_compact (void **v, char *e_text, size_t e_size)
 			continue;
 		if (g->nodes[i].n_adj == 0)
 			continue;
-		graph_add_node(new_g, g->nodes[i].name, g->nodes[i].type);
+		if (graph_add_node(new_g, g->nodes[i].name, g->nodes[i].type))
+			return return_error(e_text, e_size, TOP_E_ALLOC, "");
 	}
 	for (int i = 0; i < g->n_nodes; i++) {
 		if (g->nodes[i].type == NODE_GATE_VISITED)
