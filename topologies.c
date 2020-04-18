@@ -218,6 +218,7 @@ static int
 graphs_product (graph_t *g_a, graph_t *g_b, graph_t *g_prod,
 	char *e_text, size_t e_size)
 {
+	int res;
 	// TODO propagate errors
 	int name_len;
 	int name_buf_blk = 32;
@@ -225,6 +226,11 @@ graphs_product (graph_t *g_a, graph_t *g_b, graph_t *g_prod,
 	char *name_buf = malloc(name_buf_cap);
 	if (!name_buf)
 		return return_error(e_text, e_size, TOP_E_ALLOC, "");
+	int name_buf_neigh_cap = name_buf_blk;
+	char *name_buf_neigh = malloc(name_buf_neigh_cap);
+	if (!name_buf_neigh)
+		return return_error(e_text, e_size, TOP_E_ALLOC, "");
+
 
 	for (int i = 0; i < g_a->n_nodes; i++) {
 		if (g_a->nodes[i].type != NODE_NODE) continue;
@@ -249,12 +255,39 @@ graphs_product (graph_t *g_a, graph_t *g_b, graph_t *g_prod,
 				return return_error(e_text, e_size, TOP_E_ALLOC, "");
 
 			// TODO add gates here
+			for (int k = 0; k < g_a->nodes[i].n_adj; k++) {
+				if (g_a->nodes[g_a->nodes[i].adj[k]].type != NODE_GATE)
+					continue;
+				name_len = strlen(name_buf) +
+					strlen(g_a->nodes[g_a->nodes[i].adj[k]].name) + 2;
+				if (name_buf_neigh_cap < name_len) {
+					name_buf_neigh_cap = (1 + name_len / name_buf_blk) *
+						name_buf_blk;
+					name_buf_neigh = realloc(name_buf_neigh,
+						name_buf_neigh_cap);
+					if (!name_buf_neigh) {
+						return return_error(e_text, e_size,
+							TOP_E_ALLOC, "");
+					}
+				}
+				sprintf(name_buf_neigh, "%s.%s", name_buf,
+					g_a->nodes[g_a->nodes[i].adj[k]].name);
+				if (graph_add_node(g_prod, name_buf_neigh, NODE_GATE))
+					return return_error(e_text, e_size, TOP_E_ALLOC, "");
+				if ((res = graph_add_edge_name(g_prod, name_buf,
+					name_buf_neigh)))
+				{
+					if (res == TOP_E_CONN) {
+						return_error(e_text, e_size, TOP_E_CONN,
+							" %s %s", name_buf, name_buf_neigh);
+						return TOP_E_CONN;
+					} else {
+						return return_error(e_text, e_size, res, "");
+					}
+				}
+			}
 		}
 	}
-
-	char *name_buf_neigh = malloc(name_buf_cap);
-	if (!name_buf_neigh)
-		return return_error(e_text, e_size, TOP_E_ALLOC, "");
 
 	for (int i = 0; i < g_a->n_nodes; i++) {
 		if (g_a->nodes[i].type != NODE_NODE) continue;
@@ -273,8 +306,17 @@ graphs_product (graph_t *g_a, graph_t *g_b, graph_t *g_prod,
 					g_a->nodes[g_a->nodes[i].adj[k]].name,
 					g_b->nodes[j].name);
 
-				graph_add_edge_name(g_prod, name_buf,
-					name_buf_neigh);
+				if ((res = graph_add_edge_name(g_prod, name_buf,
+					name_buf_neigh)))
+				{
+					if (res == TOP_E_CONN) {
+						return_error(e_text, e_size, TOP_E_CONN,
+							" %s %s", name_buf, name_buf_neigh);
+						return TOP_E_CONN;
+					} else {
+						return return_error(e_text, e_size, res, "");
+					}
+				}
 			}
 
 			for (int k = 0; k < g_b->nodes[j].n_adj; k++) {
@@ -286,8 +328,17 @@ graphs_product (graph_t *g_a, graph_t *g_b, graph_t *g_prod,
 					g_a->nodes[i].name,
 					g_b->nodes[g_b->nodes[j].adj[k]].name);
 
-				graph_add_edge_name(g_prod, name_buf,
-					name_buf_neigh);
+				if ((res = graph_add_edge_name(g_prod, name_buf,
+					name_buf_neigh)))
+				{
+					if (res == TOP_E_CONN) {
+						return_error(e_text, e_size, TOP_E_CONN,
+							" %s %s", name_buf, name_buf_neigh);
+						return TOP_E_CONN;
+					} else {
+						return return_error(e_text, e_size, res, "");
+					}
+				}
 			}
 		}
 	}
@@ -389,6 +440,7 @@ add_submodule (submodule_wrapper_t *smodule,
 			return res;
 		}
 		topologies_graph_compact((void **) &g_b, e_text, e_size);
+		free(s_tmp->name);
 		free(s_tmp);
 		graph_t *g_prod = topologies_graph_create();
 		if (!g_b) {
@@ -404,6 +456,7 @@ add_submodule (submodule_wrapper_t *smodule,
 		if ((res = graph_insert(g, g_prod, s, e_text, e_size))) {
 			return res;
 		}
+		topologies_graph_destroy(g_prod);
 	} else {
 		submodule_plain_t *sm = smodule->ptr.subm;
 		for (int i = 0; i < sm->n_params; i++) {
@@ -706,6 +759,31 @@ topologies_graph_compact (void **v, char *e_text, size_t e_size)
 }
 
 static void
+free_submodule (submodule_wrapper_t *s)
+{
+	if (s->type == SUBM_HAS_SUBM) {
+		free(s->ptr.subm->name);
+		free(s->ptr.subm->module);
+		free(s->ptr.subm->size);
+		if (s->ptr.subm->n_params) {
+			for (int k = 0; k < s->ptr.subm->n_params; k++)
+			{
+				free(s->ptr.subm->params[k].name);
+				free(s->ptr.subm->params[k].value);
+			}
+			free(s->ptr.subm->params);
+		}
+		free(s->ptr.subm);
+	} else {
+		free_submodule(s->ptr.prod->a);
+		free(s->ptr.prod->a);
+		free_submodule(s->ptr.prod->b);
+		free(s->ptr.prod->b);
+		free(s->ptr.prod);
+	}
+}
+
+static void
 free_connection (connection_wrapper_t *c)
 {
 	if (c->type == CONN_HAS_CONN) {
@@ -742,23 +820,12 @@ topologies_network_destroy (void *v)
 				}
 				free(n->modules[i].params);
 			}
-			/*
 			if (n->modules[i].submodules) {
 				for (int j = 0; j < n->modules[i].n_submodules; j++) {
-					free(n->modules[i].submodules[j].name);
-					free(n->modules[i].submodules[j].module);
-					free(n->modules[i].submodules[j].size);
-					if (n->modules[i].submodules[j].params) {
-						for (int k = 0; k < n->modules[i].submodules[j].n_params; k++)
-						{
-							free(n->modules[i].submodules[j].params[k].name);
-							free(n->modules[i].submodules[j].params[k].value);
-						}
-						free(n->modules[i].submodules[j].params);
-					}
+					free_submodule(&n->modules[i].submodules[j]);
 				}
 				free(n->modules[i].submodules);
-			}*/
+			}
 			if (n->modules[i].gates) {
 				for (int j = 0; j < n->modules[i].n_gates; j++) {
 					free(n->modules[i].gates[j].name);

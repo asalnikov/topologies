@@ -13,7 +13,7 @@
 			"name": "simplevec",
 			"module": "simple",
 			"size": "k",
-			"params": [ { "n": "2" } ]
+			"params": [ { "n": "3" } ]
 		}
 	],
 	"connections": [

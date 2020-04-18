@@ -103,6 +103,7 @@ graph_are_adjacent (node_t *node_a, node_t *node_b)
 int
 graph_add_edge_name (graph_t *g, char *name_a, char *name_b)
 {
+	// TODO e_conn vs e_alloc
 	node_t *node_a, *node_b;
 	node_a = graph_find_node(g, name_a);
 	node_b = graph_find_node(g, name_b);
