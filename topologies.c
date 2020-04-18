@@ -219,7 +219,6 @@ graphs_product (graph_t *g_a, graph_t *g_b, graph_t *g_prod,
 	char *e_text, size_t e_size)
 {
 	int res;
-	// TODO propagate errors
 	int name_len;
 	int name_buf_blk = 32;
 	int name_buf_cap = name_buf_blk;
@@ -254,7 +253,6 @@ graphs_product (graph_t *g_a, graph_t *g_b, graph_t *g_prod,
 			if (graph_add_node(g_prod, name_buf, NODE_NODE))
 				return return_error(e_text, e_size, TOP_E_ALLOC, "");
 
-			// TODO add gates here
 			for (int k = 0; k < g_a->nodes[i].n_adj; k++) {
 				if (g_a->nodes[g_a->nodes[i].adj[k]].type != NODE_GATE)
 					continue;
@@ -393,10 +391,14 @@ graph_insert (graph_t *g, graph_t *g_prod, name_stack_t *s,
 			if (i < g_prod->nodes[i].adj[j]) continue;
 			sprintf(name_buf, "%s.%s", stack_name, g_prod->nodes[i].name);
 			sprintf(name_buf_2, "%s.%s", stack_name, g_prod->nodes[g_prod->nodes[i].adj[j]].name);
-			if ((res = graph_add_edge_name(g, name_buf,
-				name_buf_2)))
-			{
-				return return_error(e_text, e_size, res, "");
+			if ((res = graph_add_edge_name(g, name_buf, name_buf_2))) {
+				if (res == TOP_E_CONN) {
+					return_error(e_text, e_size, TOP_E_CONN,
+						" %s %s", name_buf, name_buf_2);
+					return TOP_E_CONN;
+				} else {
+					return return_error(e_text, e_size, res, "");
+				}
 			}
 		}
 	}

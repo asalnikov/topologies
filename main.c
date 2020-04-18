@@ -9,13 +9,8 @@
 /* TODO
  * comments!
  * distinguish nodes and routers
- * cartesian product https://en.wikipedia.org/wiki/Cartesian_product_of_graphs
- ** compact the subgraph before computing product
- * forbid dots (and probably other symbols? what'll be used for cart. product?)
  *
- * param vectors ?
  * rewrite malloc ?
- * strict mode, error on unconnected gates ?
  * connect to the node's next free gate ?
  * pass submodule's module as a param => text variables ?
  *
@@ -75,7 +70,7 @@ main (int argc, char *argv[])
 		printf("%s\n", e_text);
 		exit(EXIT_FAILURE);
 	}
-	topologies_graph_print(graph, stdout, true);
+	topologies_graph_print(graph, stdout, false);
 	topologies_graph_destroy(graph);
 
 	topologies_network_destroy(net);

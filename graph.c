@@ -103,7 +103,6 @@ graph_are_adjacent (node_t *node_a, node_t *node_b)
 int
 graph_add_edge_name (graph_t *g, char *name_a, char *name_b)
 {
-	// TODO e_conn vs e_alloc
 	node_t *node_a, *node_b;
 	node_a = graph_find_node(g, name_a);
 	node_b = graph_find_node(g, name_b);
@@ -124,10 +123,16 @@ topologies_graph_print (graph_t *g, FILE *stream, bool print_gate_nodes)
 				i, g->nodes[i].name);
 	}
 	for (int i = 0; i < g->n_nodes; i++) {
+		if ((g->nodes[i].type != NODE_NODE) && !print_gate_nodes)
+			continue;
 		for (int j = 0; j < g->nodes[i].n_adj; j++) {
-			if (i < g->nodes[i].adj[j])
-				fprintf(stream, "n%d -- n%d;\n",
-					i, g->nodes[i].adj[j]);
+			if (i > g->nodes[i].adj[j]) continue;
+			if (!print_gate_nodes &&
+				g->nodes[g->nodes[i].adj[j]].type != NODE_NODE)
+			{
+				continue;
+			}
+			fprintf(stream, "n%d -- n%d;\n", i, g->nodes[i].adj[j]);
 		}
 	}
 	fprintf(stream, "}\n");
