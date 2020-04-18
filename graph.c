@@ -4,6 +4,7 @@
 #include <string.h>
 
 #include "graph.h"
+#include "topologies.h"
 #include "defs.h"
 #include "errors.h"
 
