@@ -284,6 +284,38 @@ graphs_product (graph_t *g_a, graph_t *g_b, graph_t *g_prod,
 					}
 				}
 			}
+
+			for (int k = 0; k < g_b->nodes[j].n_adj; k++) {
+				if (g_b->nodes[g_b->nodes[j].adj[k]].type != NODE_GATE)
+					continue;
+				name_len = strlen(name_buf) +
+					strlen(g_b->nodes[g_b->nodes[j].adj[k]].name) + 2;
+				if (name_buf_neigh_cap < name_len) {
+					name_buf_neigh_cap = (1 + name_len / name_buf_blk) *
+						name_buf_blk;
+					name_buf_neigh = realloc(name_buf_neigh,
+						name_buf_neigh_cap);
+					if (!name_buf_neigh) {
+						return return_error(e_text, e_size,
+							TOP_E_ALLOC, "");
+					}
+				}
+				sprintf(name_buf_neigh, "%s.%s", name_buf,
+					g_b->nodes[g_b->nodes[j].adj[k]].name);
+				if (graph_add_node(g_prod, name_buf_neigh, NODE_GATE))
+					return return_error(e_text, e_size, TOP_E_ALLOC, "");
+				if ((res = graph_add_edge_name(g_prod, name_buf,
+					name_buf_neigh)))
+				{
+					if (res == TOP_E_CONN) {
+						return_error(e_text, e_size, TOP_E_CONN,
+							" %s %s", name_buf, name_buf_neigh);
+						return TOP_E_CONN;
+					} else {
+						return return_error(e_text, e_size, res, "");
+					}
+				}
+			}
 		}
 	}
 
@@ -354,7 +386,6 @@ graph_insert (graph_t *g, graph_t *g_prod, name_stack_t *s,
 	int res;
 	char *stack_name = name_stack_name(s);
 	if (!stack_name) return return_error(e_text, e_size, TOP_E_ALLOC, "");
-	printf("# %s\n", stack_name);
 
 	int name_buf_blk = 32;
 	int name_buf_cap = name_buf_blk;
