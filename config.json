@@ -13,6 +13,14 @@
 		"module": "simple",
 		"size": "4",
 		"params": [ { "x": "6" } ]
+	},
+	{
+		"if": "qqq > 3",
+		"subm":
+		{
+			"name": "condvec",
+			"module": "simple"
+		}
 	}],
 	"connections": [
 	{
@@ -37,6 +45,6 @@
 
 { "network": {
 	"module": "net",
-	"params": [ { "w": "4" } ]
+	"params": [ { "w": "4" }, { "qqq": "10" } ]
 }}
 ]

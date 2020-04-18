@@ -96,7 +96,8 @@ typedef struct submodule_wrapper submodule_wrapper_t;
 
 typedef enum {
 	SUBM_HAS_SUBM,
-	SUBM_HAS_PROD
+	SUBM_HAS_PROD,
+	SUBM_HAS_COND
 } submodule_type_t;
 
 typedef struct {
@@ -112,11 +113,17 @@ typedef struct {
 	submodule_wrapper_t *b;
 } submodule_prod_t;
 
+typedef struct {
+	char *condition;
+	submodule_wrapper_t *subm;
+} submodule_cond_t;
+
 struct submodule_wrapper {
 	submodule_type_t type;
 	union {
 		submodule_plain_t *subm;
 		submodule_prod_t *prod;
+		submodule_cond_t *cond;
 	} ptr;
 };
 

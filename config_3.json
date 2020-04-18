@@ -48,6 +48,6 @@
 
 { "network": { 
 	"module": "outer",
-	"params": [ { "k": "3" } ]
+	"params": [ { "k": "3" }, { "qqq": "5" } ]
 }}
 ]

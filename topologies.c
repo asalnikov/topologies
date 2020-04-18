@@ -490,7 +490,7 @@ add_submodule (submodule_wrapper_t *smodule,
 			return res;
 		}
 		topologies_graph_destroy(g_prod);
-	} else {
+	} else if (smodule->type == SUBM_HAS_SUBM) {
 		submodule_plain_t *sm = smodule->ptr.subm;
 		for (int i = 0; i < sm->n_params; i++) {
 			if ((res = param_stack_enter(p, &sm->params[i], e_text,
@@ -528,6 +528,22 @@ add_submodule (submodule_wrapper_t *smodule,
 		}
 		for (int i = 0; i < sm->n_params; i++) {
 			param_stack_leave(p);
+		}
+	} else { /* SUBM_HAD_COND */
+		submodule_cond_t *sc = smodule->ptr.cond;
+		double tmp_d;
+		if ((res = param_stack_eval(p, sc->condition, &tmp_d,
+			e_text, e_size)))
+		{
+			return res;
+		}
+		int condition = lrint(tmp_d);
+		if (condition) {
+			if ((res = add_submodule(sc->subm, net, g, s, p,
+				e_text, e_size)))
+			{
+				return res;
+			}
 		}
 	}
 	return 0;
@@ -807,6 +823,11 @@ free_submodule (submodule_wrapper_t *s)
 			free(s->ptr.subm->params);
 		}
 		free(s->ptr.subm);
+	} else if (s->type == SUBM_HAS_COND) {
+		free_submodule(s->ptr.cond->subm);
+		free(s->ptr.cond->subm);
+		free(s->ptr.cond->condition);
+		free(s->ptr.cond);
 	} else {
 		free_submodule(s->ptr.prod->a);
 		free(s->ptr.prod->a);
