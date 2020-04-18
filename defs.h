@@ -92,10 +92,12 @@ struct connection_wrapper {
 	} ptr;
 };
 
-typedef struct {
-	char *name;
-	char *size;
-} gate_t;
+typedef struct submodule_wrapper submodule_wrapper_t;
+
+typedef enum {
+	SUBM_HAS_SUBM,
+	SUBM_HAS_PROD
+} submodule_type_t;
 
 typedef struct {
 	char *name;
@@ -103,7 +105,25 @@ typedef struct {
 	char *size;
 	raw_param_t *params;
 	int n_params;
-} submodule_t;
+} submodule_plain_t;
+
+typedef struct {
+	submodule_wrapper_t *a;
+	submodule_wrapper_t *b;
+} submodule_prod_t;
+
+struct submodule_wrapper {
+	submodule_type_t type;
+	union {
+		submodule_plain_t *subm;
+		submodule_prod_t *prod;
+	} ptr;
+};
+
+typedef struct {
+	char *name;
+	char *size;
+} gate_t;
 
 typedef enum {
 	MODULE_COMPOUND,
@@ -114,7 +134,7 @@ typedef struct {
 	char *name;
 	raw_param_t *params;
 	int n_params;
-	submodule_t *submodules;
+	submodule_wrapper_t *submodules;
 	int n_submodules;
 	gate_t *gates;
 	int n_gates;

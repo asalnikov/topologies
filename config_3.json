@@ -1,0 +1,53 @@
+[
+{ "simplemodule": {
+	"name": "simple",
+	"gates": [
+		{ "gate": "n" }
+	]
+}},
+
+{ "module": {
+	"name": "ring",
+	"submodules": [
+		{
+			"name": "simplevec",
+			"module": "simple",
+			"size": "k",
+			"params": [ { "n": "2" } ]
+		}
+	],
+	"connections": [
+		{
+			"loop": "i",
+			"start": "0",
+			"end": "k - 1",
+			"conn": {
+				"from": "simplevec[i].gate[0]",
+				"to": "simplevec[(i + 1) % k].gate[1]"
+			}
+		}
+	]
+}},
+
+{ "module": {
+	"name": "outer",
+	"submodules": [
+		{ "cartesian": [
+			{
+				"name": "a",
+				"module": "ring"
+			},
+			{
+				"name": "b",
+				"module": "ring"
+			}
+		]}
+	]
+}},
+
+
+{ "network": { 
+	"module": "outer",
+	"params": [ { "k": "3" } ]
+}}
+]

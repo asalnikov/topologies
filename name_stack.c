@@ -41,7 +41,7 @@ name_stack_enter (name_stack_t *s, char *name, int index)
 			free(head);
 			return TOP_E_ALLOC;
 		}
-		strncpy(s->name, name, len);
+		strncpy(head->name, name, len);
 	} else {
 		len = snprintf(0, 0, "%s[%d]", name, index) + 1;
 		head->name = (char *) malloc(len);
@@ -72,6 +72,7 @@ name_stack_name (name_stack_t *s)
 {
 	unsigned len = 0, off = 0;
 	name_stack_t *head = s;
+	if (!head) return NULL;
 	while (head->next != NULL) {
 		len += strlen(head->name) + 1;
 		head = head->next;
@@ -81,8 +82,10 @@ name_stack_name (name_stack_t *s)
 	if (!name) return NULL;
 	head = s;
 	while (head->next != NULL) {
-		snprintf(name + off, strlen(head->name) + 2, "%s.", head->name);
-		off += strlen(head->name) + 1;
+		if (strlen(head->name) != 0) {
+			snprintf(name + off, strlen(head->name) + 2, "%s.", head->name);
+			off += strlen(head->name) + 1;
+		}
 		head = head->next;
 	}
 	snprintf(name + off, strlen(head->name) + 2, "%s", head->name);

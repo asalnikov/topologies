@@ -139,12 +139,13 @@ expand_module (graph_t *g, module_t *module, network_definition_t *net,
 static int
 enter_and_expand_module (network_definition_t *net, graph_t *g,
 	name_stack_t *s, param_stack_t *p,
-	submodule_t *smodule, int j,
+	submodule_plain_t *smodule, int j,
 	char *e_text, size_t e_size)
 {
 	int res;
 	if (name_stack_enter(s, smodule->name, j))
 		return return_error(e_text, e_size, TOP_E_ALLOC, "");
+	// TODO check j
 	module_t *module = find_module(net, smodule->module);
 	if (module == NULL) {
 		name_stack_leave(s);
@@ -210,6 +211,205 @@ traverse_and_add_conns (connection_wrapper_t *c, graph_t *g,
 	} else {
 		if ((res = graph_eval_and_add_edge(g, p, s, c, e_text, e_size)))
 			return res;
+	}
+	return 0;
+}
+
+static int
+graphs_product (graph_t *g_a, graph_t *g_b, graph_t *g_prod,
+	char *e_text, size_t e_size)
+{
+	// TODO propagate errors
+	int name_len;
+	int name_buf_blk = 32; // TODO test
+	int name_buf_cap = name_buf_blk;
+	char *name_buf = malloc(name_buf_cap);
+	if (!name_buf)
+		return return_error(e_text, e_size, TOP_E_ALLOC, "");
+
+	for (int i = 0; i < g_a->n_nodes; i++) {
+		if (g_a->nodes[i].type != NODE_NODE) continue;
+		for (int j = 0; j < g_b->n_nodes; j++) {
+			if (g_b->nodes[j].type != NODE_NODE) continue;
+
+			name_len = strlen(g_a->nodes[i].name) +
+				strlen(g_b->nodes[j].name) + 4;
+			if (name_buf_cap < name_len) {
+				name_buf_cap = (1 + name_len / name_buf_blk) *
+					name_buf_blk;
+				name_buf = realloc(name_buf, name_buf_cap);
+				if (!name_buf) {
+					return return_error(e_text, e_size,
+						TOP_E_ALLOC, "");
+				}
+			}
+
+			sprintf(name_buf, "(%s,%s)", g_a->nodes[i].name,
+				g_b->nodes[j].name);
+			graph_add_node(g_prod, name_buf, NODE_NODE);
+
+			// TODO add gates here
+		}
+	}
+
+	char *name_buf_neigh = malloc(name_buf_cap);
+	if (!name_buf_neigh)
+		return return_error(e_text, e_size, TOP_E_ALLOC, "");
+
+	for (int i = 0; i < g_a->n_nodes; i++) {
+		if (g_a->nodes[i].type != NODE_NODE) continue;
+		for (int j = 0; j < g_b->n_nodes; j++) {
+			if (g_b->nodes[j].type != NODE_NODE) continue;
+
+			sprintf(name_buf, "(%s,%s)", g_a->nodes[i].name,
+				g_b->nodes[j].name);
+
+			for (int k = 0; k < g_a->nodes[i].n_adj; k++) {
+				if (g_a->nodes[g_a->nodes[i].adj[k]].type != NODE_NODE)
+					continue;
+				if (g_a->nodes[i].adj[k] < i) continue;
+
+				sprintf(name_buf_neigh, "(%s,%s)",
+					g_a->nodes[g_a->nodes[i].adj[k]].name,
+					g_b->nodes[j].name);
+
+				graph_add_edge_name(g_prod, name_buf,
+					name_buf_neigh);
+			}
+
+			for (int k = 0; k < g_b->nodes[j].n_adj; k++) {
+				if (g_b->nodes[g_b->nodes[j].adj[k]].type != NODE_NODE)
+					continue;
+				if (g_b->nodes[j].adj[k] < j) continue;
+
+				sprintf(name_buf_neigh, "(%s,%s)",
+					g_a->nodes[i].name,
+					g_b->nodes[g_b->nodes[j].adj[k]].name);
+
+				graph_add_edge_name(g_prod, name_buf,
+					name_buf_neigh);
+			}
+		}
+	}
+
+	return 0;
+}
+
+static int
+graph_insert (graph_t *g, graph_t *g_prod, name_stack_t *s,
+	char *e_text, size_t e_size)
+{
+	// TODO use name stack
+	(void) s;
+	int res;
+	for (int i = 0; i < g_prod->n_nodes; i++) {
+		if (graph_add_node(g, g_prod->nodes[i].name,
+			g_prod->nodes[i].type))
+		{
+			return return_error(e_text, e_size, TOP_E_ALLOC, "");
+		}
+	}
+	for (int i = 0; i < g_prod->n_nodes; i++) {
+		for (int j = 0; j < g_prod->nodes[i].n_adj; j++) {
+			if (i < g_prod->nodes[i].adj[j]) continue;
+			if ((res = graph_add_edge_name(g, g_prod->nodes[i].name,
+				g_prod->nodes[g_prod->nodes[i].adj[j]].name)))
+			{
+				return return_error(e_text, e_size, res, "");
+			}
+		}
+	}
+	return 0;
+}
+
+static int
+add_submodule (submodule_wrapper_t *smodule,
+	network_definition_t *net, graph_t *g,
+	name_stack_t *s, param_stack_t *p,
+	char *e_text, size_t e_size)
+{
+	int res;
+	if (smodule->type == SUBM_HAS_PROD) {
+		graph_t *g_a = topologies_graph_create();
+		if (!g_a) {
+			return return_error(e_text, e_size, TOP_E_ALLOC, "");
+		}
+		graph_t *g_b = topologies_graph_create();
+		if (!g_b) {
+			topologies_graph_destroy(g_a);
+			return return_error(e_text, e_size, TOP_E_ALLOC, "");
+		}
+
+		name_stack_t *s_tmp = name_stack_create("");
+		if ((res = add_submodule(smodule->ptr.prod->a,
+			net, g_a, s_tmp, p,
+			e_text, e_size)))
+		{
+			return res;
+		}
+		topologies_graph_compact((void **) &g_a, e_text, e_size);
+
+		if ((res = add_submodule(smodule->ptr.prod->b,
+			net, g_b, s_tmp, p,
+			e_text, e_size)))
+		{
+			return res;
+		}
+		topologies_graph_compact((void **) &g_b, e_text, e_size);
+		free(s_tmp);
+		graph_t *g_prod = topologies_graph_create();
+		if (!g_b) {
+			topologies_graph_destroy(g_a);
+			topologies_graph_destroy(g_b);
+			return return_error(e_text, e_size, TOP_E_ALLOC, "");
+		}
+		if ((res = graphs_product(g_a, g_b, g_prod, e_text, e_size))) {
+			return res;
+		}
+		topologies_graph_destroy(g_a);
+		topologies_graph_destroy(g_b);
+		if ((res = graph_insert(g, g_prod, s, e_text, e_size))) {
+			return res;
+		}
+	} else {
+		submodule_plain_t *sm = smodule->ptr.subm;
+		for (int i = 0; i < sm->n_params; i++) {
+			if ((res = param_stack_enter(p, &sm->params[i], e_text,
+				e_size)))
+			{
+				return res;
+			}
+		}
+		int size;
+		double size_d;
+		if (sm->size == NULL) {
+			size = 0;
+		} else {
+			if ((res = param_stack_eval(p, sm->size, &size_d, e_text,
+				e_size)))
+			{
+				return res;
+			}
+			size = lrint(size_d);
+		}
+		if (size > 0) {
+			for (int j = 0; j < size; j++) {
+				if ((res = enter_and_expand_module(net, g, s, p,
+					sm, j, e_text, e_size)))
+				{
+					return res;
+				}
+			}
+		} else {
+			if ((res = enter_and_expand_module(net, g, s, p, sm, -1,
+				e_text, e_size)))
+			{
+				return res;
+			}
+		}
+		for (int i = 0; i < sm->n_params; i++) {
+			param_stack_leave(p);
+		}
 	}
 	return 0;
 }
@@ -291,50 +491,15 @@ expand_module (graph_t *g, module_t *module, network_definition_t *net,
 			}
 		}
 		for (int i = 0; i < module->n_submodules; i++) {
-			submodule_t smodule = module->submodules[i];
-			for (int i = 0; i < smodule.n_params; i++) {
-				if ((res = param_stack_enter(p,
-					&smodule.params[i], e_text, e_size)))
-				{
-					return res;
-				}
-			}
-			int size;
-			double size_d;
-			if (smodule.size == NULL) {
-				size = 0;
-			} else {
-				if ((res = param_stack_eval(p,
-					smodule.size, &size_d,
-					e_text, e_size)))
-				{
-					return res;
-				}
-			}
-			size = lrint(size_d);
-			if (size > 0) {
-				for (int j = 0; j < size; j++) {
-					if ((res = enter_and_expand_module(net, g, s,
-						p, &smodule, j, e_text,
-						e_size)))
-					{
-						return res;
-					}
-				}
-			} else {
-				if ((res = enter_and_expand_module(net, g, s,
-					p, &smodule, -1, e_text, e_size)))
-				{
-					return res;
-				}
-			}
-			for (int i = 0; i < smodule.n_params; i++) {
-				param_stack_leave(p);
+			submodule_wrapper_t *smodule = &module->submodules[i];
+			if ((res = add_submodule(smodule, net, g, s, p,
+				e_text, e_size)))
+			{
+				return res;
 			}
 		}
 		for (int i = 0; i < module->n_connections; i++) {
-			if ((res =
-				traverse_and_add_conns(&module->connections[i],
+			if ((res = traverse_and_add_conns(&module->connections[i],
 				g, p, s, e_text, e_size)))
 			{
 				return res;
@@ -543,6 +708,7 @@ topologies_network_destroy (void *v)
 				}
 				free(n->modules[i].params);
 			}
+			/*
 			if (n->modules[i].submodules) {
 				for (int j = 0; j < n->modules[i].n_submodules; j++) {
 					free(n->modules[i].submodules[j].name);
@@ -558,7 +724,7 @@ topologies_network_destroy (void *v)
 					}
 				}
 				free(n->modules[i].submodules);
-			}
+			}*/
 			if (n->modules[i].gates) {
 				for (int j = 0; j < n->modules[i].n_gates; j++) {
 					free(n->modules[i].gates[j].name);

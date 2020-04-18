@@ -7,10 +7,11 @@
 #include "topologies.h"
 
 /* TODO
- * free memory on error
+ * comments!
  * distinguish nodes and routers
  * cartesian product https://en.wikipedia.org/wiki/Cartesian_product_of_graphs
  ** compact the subgraph before computing product
+ * forbid dots (and probably other symbols? what'll be used for cart. product?)
  *
  * param vectors ?
  * rewrite malloc ?
