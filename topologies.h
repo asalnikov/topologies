@@ -24,6 +24,12 @@ topologies_graph_create (void);
 void
 topologies_graph_print (graph_t *g, FILE *stream, bool print_gate_nodes);
 
+char *
+topologies_graph_string (graph_t *g, bool print_gate_nodes);
+
+void
+topologies_graph_string_free (char *string);
+
 void
 topologies_graph_destroy (graph_t *g);
 

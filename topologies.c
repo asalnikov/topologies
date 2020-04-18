@@ -908,6 +908,7 @@ topologies_network_destroy (void *v)
 		free(n->network->module);
 		free(n->network);
 	}
+	free(n);
 }
 
 int

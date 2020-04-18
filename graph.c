@@ -139,6 +139,67 @@ topologies_graph_print (graph_t *g, FILE *stream, bool print_gate_nodes)
 	fprintf(stream, "}\n");
 }
 
+char *
+topologies_graph_string (graph_t *g, bool print_gate_nodes)
+{
+	int buf_len = 0;
+
+	buf_len += snprintf(0, 0, "graph g {\n");
+	for (int i = 0; i < g->n_nodes; i++) {
+		if ((g->nodes[i].type == NODE_NODE) || print_gate_nodes)
+			buf_len += snprintf(0, 0, "n%d [label=\"%s\"];\n",
+				i, g->nodes[i].name);
+	}
+	for (int i = 0; i < g->n_nodes; i++) {
+		if ((g->nodes[i].type != NODE_NODE) && !print_gate_nodes)
+			continue;
+		for (int j = 0; j < g->nodes[i].n_adj; j++) {
+			if (i > g->nodes[i].adj[j]) continue;
+			if (!print_gate_nodes &&
+				g->nodes[g->nodes[i].adj[j]].type != NODE_NODE)
+			{
+				continue;
+			}
+			buf_len += snprintf(0, 0, "n%d -- n%d;\n", i,
+				g->nodes[i].adj[j]);
+		}
+	}
+	buf_len += snprintf(0, 0, "}\n");
+
+	char *buf = malloc(buf_len + 1);
+	if (!buf) return NULL;
+
+	buf_len = 0;
+	buf_len += sprintf(buf, "graph g {\n");
+	for (int i = 0; i < g->n_nodes; i++) {
+		if ((g->nodes[i].type == NODE_NODE) || print_gate_nodes)
+			buf_len += sprintf(buf + buf_len, "n%d [label=\"%s\"];\n",
+				i, g->nodes[i].name);
+	}
+	for (int i = 0; i < g->n_nodes; i++) {
+		if ((g->nodes[i].type != NODE_NODE) && !print_gate_nodes)
+			continue;
+		for (int j = 0; j < g->nodes[i].n_adj; j++) {
+			if (i > g->nodes[i].adj[j]) continue;
+			if (!print_gate_nodes &&
+				g->nodes[g->nodes[i].adj[j]].type != NODE_NODE)
+			{
+				continue;
+			}
+			buf_len += sprintf(buf + buf_len, "n%d -- n%d;\n", i,
+				g->nodes[i].adj[j]);
+		}
+	}
+	buf_len += sprintf(buf + buf_len, "}\n");
+	return buf;
+}
+
+void
+topologies_graph_string_free (char *string)
+{
+	free(string);
+}
+
 void
 topologies_graph_destroy (graph_t *g)
 {
