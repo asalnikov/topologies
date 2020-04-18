@@ -1,7 +1,8 @@
 main
 *~
-parse_order.txt
 *.swp
 *.swo
 *.dot
 *.so
+*.odf
+*.pdf
