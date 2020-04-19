@@ -6,3 +6,4 @@ main
 *.so
 *.odf
 *.pdf
+__pycache__

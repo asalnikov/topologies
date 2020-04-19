@@ -66,7 +66,9 @@ add_auto_gate (graph_t *g, int *r_n_node, char *node_name, name_stack_t *s)
 		bool seen = false;
 		char *full_name = get_full_name(s, auto_name, -1);
 		for (int k = 0; k < g->nodes[n_node].n_adj; k++) {
-			if (strcmp(g->nodes[g->nodes[n_node].adj[k]].name, full_name) == 0)  {
+			if (strcmp(g->nodes[g->nodes[n_node].adj[k]].name,
+				full_name) == 0)
+			{
 				seen = true;
 			}
 		}
@@ -249,14 +251,15 @@ traverse_and_add_conns (connection_wrapper_t *c, graph_t *g,
 		}
 		int condition = lrint(tmp_d);
 		if (condition) {
-			if ((res = traverse_and_add_conns(c->ptr.cond->conn_then, g,
-				p, s, e_text, e_size)))
+			if ((res = traverse_and_add_conns(c->ptr.cond->conn_then,
+				g, p, s, e_text, e_size)))
+
 			{
 				return res;
 			}
 		} else if (c->ptr.cond->conn_else) {
-			if ((res = traverse_and_add_conns(c->ptr.cond->conn_else, g,
-				p, s, e_text, e_size)))
+			if ((res = traverse_and_add_conns(c->ptr.cond->conn_else,
+				g, p, s, e_text, e_size)))
 			{
 				return res;
 			}
