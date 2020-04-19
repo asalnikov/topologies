@@ -7,7 +7,7 @@ from graph_tool.all import *
 from wrapper import Topologies
 
 if (len(sys.argv) != 2) and (len(sys.argv) != 3):
-    sys.exit("usage: vis.py <graph.dot> [ sfdp | fr | arf | plan | rand ]");
+    sys.exit("usage: vis.py <config.json> [ sfdp | fr | arf | plan | rand ]");
 
 try:
     with open(sys.argv[1], 'r') as cfile:
