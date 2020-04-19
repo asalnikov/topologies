@@ -72,7 +72,7 @@ main (int argc, char *argv[])
 		fprintf(stderr, "%s\n", e_text);
 		exit(EXIT_FAILURE);
 	}
-	topologies_graph_print(graph, stdout, true);
+	topologies_graph_print(graph, stdout, false);
 	topologies_graph_destroy(graph);
 
 	topologies_network_destroy(net);

@@ -66,15 +66,17 @@ add_auto_gate (graph_t *g, node_t **r_node, char *node_name, name_stack_t *s)
 		bool seen = false;
 		char *full_name = get_full_name(s, auto_name, -1);
 		for (int k = 0; k < node->n_adj; k++) {
-			if (strcmp(g->nodes[node->adj[k]].name, full_name) == 0) 
-			{
+			printf("## %s %s\n", full_name, g->nodes[node->adj[k]].name);
+			if (strcmp(g->nodes[node->adj[k]].name, full_name) == 0)  {
 				seen = true;
 			}
 		}
-		free(full_name);
 		if (!seen) break;
+		printf("## %s was seen\n", full_name);
+		free(full_name);
 	}
 	char *full_name = get_full_name(s, auto_name, -1);
+	printf("## %s was not seen\n", full_name);
 	if ((res = graph_add_node(g, full_name, NODE_GATE))) return res;
 	*r_node = graph_find_node(g, full_name);
 	graph_add_edge_ptr(node, *r_node);
@@ -116,10 +118,10 @@ graph_eval_and_add_edge (graph_t *g, param_stack_t *p,
 	node_t *node_a = graph_find_node(g, full_name_a);
 	node_t *node_b = graph_find_node(g, full_name_b);
 	if (node_a == NULL)
-		return_error(e_text, e_size, TOP_E_CONN,
+		return return_error(e_text, e_size, TOP_E_CONN,
 			" %s %s", full_name_a, full_name_b);
 	if (node_b == NULL)
-		return_error(e_text, e_size, TOP_E_CONN,
+		return return_error(e_text, e_size, TOP_E_CONN,
 			" %s %s", full_name_a, full_name_b);
 	if (node_a->type == NODE_NODE)
 		if (add_auto_gate(g, &node_a, name_a, s))
