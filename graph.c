@@ -50,21 +50,23 @@ graph_add_node (graph_t *g, char *name, node_type type)
 	return 0;
 }
 
-node_t *
+int
 graph_find_node (graph_t *g, char *name)
 {
 	for (int i = 0; i < g->n_nodes; i++)
 		if (strcmp(g->nodes[i].name, name) == 0)
-			return &(g->nodes[i]);
-	return NULL;
+			return i;
+	return -1;
 }
 
 int
-graph_add_edge_ptr (node_t *node_a, node_t *node_b)
+graph_add_edge_id (graph_t *g, int n_a, int n_b)
 {
-	if ((node_a == NULL) || (node_b == NULL))
+	if ((n_a < 0) || (n_b < 0) || (n_a > g->n_nodes) || (n_b > g->n_nodes))
 		return TOP_E_CONN;
 
+	node_t *node_a = &(g->nodes[n_a]);
+	node_t *node_b = &(g->nodes[n_b]);
 	int i = node_a->n_adj;
 	if (node_a->n_adj == node_a->cap_adj) {
 		node_a->cap_adj += ADJ_BLK_SIZE;
@@ -104,14 +106,14 @@ graph_are_adjacent (node_t *node_a, node_t *node_b)
 int
 graph_add_edge_name (graph_t *g, char *name_a, char *name_b)
 {
-	node_t *node_a, *node_b;
+	int node_a, node_b;
 	node_a = graph_find_node(g, name_a);
 	node_b = graph_find_node(g, name_b);
-	if (node_a == NULL)
+	if (node_a < 0)
 		return TOP_E_CONN;
-	if (node_b == NULL)
+	if (node_b < 0)
 		return TOP_E_CONN;
-	return graph_add_edge_ptr(node_a, node_b);
+	return graph_add_edge_id(g, node_a, node_b);
 }
 
 void

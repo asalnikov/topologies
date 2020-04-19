@@ -1,0 +1,48 @@
+[
+{ "simplemodule": {
+	"name": "simple"
+}},
+
+{ "module": {
+	"name": "gft_layer",
+	"submodules": [
+	{
+		"name": "node",
+		"module": "simple",
+		"size": "w^h"
+	},
+	{
+		"if": "h > 0",
+		"subm": {
+			"name": "prev",
+			"module": "gft_layer",
+			"size": "m",
+			"params": [ { "h": "h-1" } ]
+		}
+	}],
+	"connections": [
+	{
+		"if": "h > 0",
+		"conn": {
+			"loop": "i",
+			"start": "0",
+			"end": "w^h",
+			"conn": {
+				"loop": "j",
+				"start": "0",
+				"end": "m",
+				"conn": {
+					"from": "prev[j].node[floor(i/w)]",
+					"to": "node[i]"
+				}
+			}
+		}
+	}
+	]
+}},
+
+{ "network": {
+	"module": "gft_layer",
+	"params": [ { "h": "2" }, { "m": "2" }, { "w": "3" } ]
+}}
+]

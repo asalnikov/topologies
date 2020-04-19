@@ -53,11 +53,11 @@ file_close (char *addr, size_t len)
 }
 
 static int
-add_auto_gate (graph_t *g, node_t **r_node, char *node_name, name_stack_t *s)
+add_auto_gate (graph_t *g, int *r_n_node, char *node_name, name_stack_t *s)
 {
 	int res;
 	int j;
-	node_t *node = *r_node;
+	int n_node = *r_n_node;
 	if ((res = name_stack_enter(s, node_name, -1))) return res;
 
 	char *auto_name = malloc(18); /* "_auto[2147483647]" */
@@ -65,21 +65,18 @@ add_auto_gate (graph_t *g, node_t **r_node, char *node_name, name_stack_t *s)
 		sprintf(auto_name, "_auto[%d]", j);
 		bool seen = false;
 		char *full_name = get_full_name(s, auto_name, -1);
-		for (int k = 0; k < node->n_adj; k++) {
-			printf("## %s %s\n", full_name, g->nodes[node->adj[k]].name);
-			if (strcmp(g->nodes[node->adj[k]].name, full_name) == 0)  {
+		for (int k = 0; k < g->nodes[n_node].n_adj; k++) {
+			if (strcmp(g->nodes[g->nodes[n_node].adj[k]].name, full_name) == 0)  {
 				seen = true;
 			}
 		}
 		if (!seen) break;
-		printf("## %s was seen\n", full_name);
 		free(full_name);
 	}
 	char *full_name = get_full_name(s, auto_name, -1);
-	printf("## %s was not seen\n", full_name);
 	if ((res = graph_add_node(g, full_name, NODE_GATE))) return res;
-	*r_node = graph_find_node(g, full_name);
-	graph_add_edge_ptr(node, *r_node);
+	*r_n_node = graph_find_node(g, full_name);
+	graph_add_edge_id(g, n_node, *r_n_node);
 	free(full_name);
 	free(auto_name);
 	name_stack_leave(s);
@@ -115,22 +112,22 @@ graph_eval_and_add_edge (graph_t *g, param_stack_t *p,
 		return return_error(e_text, e_size, TOP_E_ALLOC, "");
 	}
 
-	node_t *node_a = graph_find_node(g, full_name_a);
-	node_t *node_b = graph_find_node(g, full_name_b);
-	if (node_a == NULL)
+	int n_node_a = graph_find_node(g, full_name_a);
+	int n_node_b = graph_find_node(g, full_name_b);
+	if (n_node_a < 0)
 		return return_error(e_text, e_size, TOP_E_CONN,
 			" %s %s", full_name_a, full_name_b);
-	if (node_b == NULL)
+	if (n_node_b < 0)
 		return return_error(e_text, e_size, TOP_E_CONN,
 			" %s %s", full_name_a, full_name_b);
-	if (node_a->type == NODE_NODE)
-		if (add_auto_gate(g, &node_a, name_a, s))
+	if (g->nodes[n_node_a].type == NODE_NODE)
+		if (add_auto_gate(g, &n_node_a, name_a, s))
 			return return_error(e_text, e_size, TOP_E_ALLOC, "");
-	if (node_b->type == NODE_NODE)
-		if (add_auto_gate(g, &node_b, name_b, s))
+	if (g->nodes[n_node_b].type == NODE_NODE)
+		if (add_auto_gate(g, &n_node_b, name_b, s))
 			return return_error(e_text, e_size, TOP_E_ALLOC, "");
 
-	if (graph_add_edge_ptr(node_a, node_b)) {
+	if (graph_add_edge_id(g, n_node_a, n_node_b)) {
 		return_error(e_text, e_size, TOP_E_CONN,
 			" %s %s", full_name_a, full_name_b);
 		free(name_a);
@@ -761,7 +758,7 @@ topologies_definition_to_graph (void *v, void **r_g, char *e_text, size_t e_size
 }
 
 static int
-graph_find_end_and_mark (graph_t *g, int prev, int n, node_t **node_res,
+graph_find_end_and_mark (graph_t *g, int prev, int n, int *n_node_res,
 	char *e_text, size_t e_size)
 {
 	node_t *node_tmp;
@@ -798,7 +795,7 @@ graph_find_end_and_mark (graph_t *g, int prev, int n, node_t **node_res,
 		}
 	}
 
-	*node_res = node_tmp;
+	*n_node_res = node_tmp->n;
 	return 0;
 }
 
@@ -806,7 +803,7 @@ int
 topologies_graph_compact (void **v, char *e_text, size_t e_size)
 {
 	int res;
-	node_t *node_a, *node_b;
+	int n_node_a, n_node_b;
 	graph_t *g = (graph_t *) *v;
 	graph_t *new_g = graph_create();
 	if (new_g == NULL)
@@ -819,14 +816,14 @@ topologies_graph_compact (void **v, char *e_text, size_t e_size)
 		for (int j = 0; j < g->nodes[i].n_adj; j++) {
 			if (g->nodes[g->nodes[i].adj[j]].type == NODE_GATE) {
 				res = graph_find_end_and_mark(g, i,
-					g->nodes[i].adj[j], &node_a, e_text, e_size);
+					g->nodes[i].adj[j], &n_node_a, e_text, e_size);
 				if (res) {
 					topologies_graph_destroy(new_g);
 					return res;
 				}
-				if (!graph_are_adjacent(node_a, &g->nodes[i])) {
-					if ((res = graph_add_edge_ptr(node_a,
-						&g->nodes[i])))
+				if (!graph_are_adjacent(&g->nodes[n_node_a], &g->nodes[i])) {
+					if ((res = graph_add_edge_id(g, n_node_a,
+						i)))
 					{
 						topologies_graph_destroy(new_g);
 						return return_error(e_text,
@@ -853,11 +850,11 @@ topologies_graph_compact (void **v, char *e_text, size_t e_size)
 				(g->nodes[g->nodes[i].adj[j]].type !=
 				NODE_GATE_VISITED))
 			{
-				node_a = graph_find_node(new_g,
+				n_node_a = graph_find_node(new_g,
 					g->nodes[i].name);
-				node_b = graph_find_node(new_g,
+				n_node_b = graph_find_node(new_g,
 					g->nodes[g->nodes[i].adj[j]].name);
-				graph_add_edge_ptr(node_a, node_b);
+				graph_add_edge_id(new_g, n_node_a, n_node_b);
 			}
 		}
 	}
