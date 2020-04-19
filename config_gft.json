@@ -13,7 +13,7 @@
 	},
 	{
 		"if": "h > 0",
-		"subm": {
+		"then": {
 			"name": "prev",
 			"module": "gft_layer",
 			"size": "m",
@@ -23,7 +23,7 @@
 	"connections": [
 	{
 		"if": "h > 0",
-		"conn": {
+		"then": {
 			"loop": "i",
 			"start": "0",
 			"end": "w^h",
