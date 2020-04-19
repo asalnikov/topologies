@@ -447,11 +447,11 @@ add_submodule (submodule_wrapper_t *smodule,
 {
 	int res;
 	if (smodule->type == SUBM_HAS_PROD) {
-		graph_t *g_a = topologies_graph_create();
+		graph_t *g_a = graph_create();
 		if (!g_a) {
 			return return_error(e_text, e_size, TOP_E_ALLOC, "");
 		}
-		graph_t *g_b = topologies_graph_create();
+		graph_t *g_b = graph_create();
 		if (!g_b) {
 			topologies_graph_destroy(g_a);
 			return return_error(e_text, e_size, TOP_E_ALLOC, "");
@@ -475,7 +475,7 @@ add_submodule (submodule_wrapper_t *smodule,
 		topologies_graph_compact((void **) &g_b, e_text, e_size);
 		free(s_tmp->name);
 		free(s_tmp);
-		graph_t *g_prod = topologies_graph_create();
+		graph_t *g_prod = graph_create();
 		if (!g_b) {
 			topologies_graph_destroy(g_a);
 			topologies_graph_destroy(g_b);
@@ -663,7 +663,7 @@ topologies_definition_to_graph (void *v, void **r_g, char *e_text, size_t e_size
 	param_stack_t *p;
 	int res;
 
-	g = topologies_graph_create();
+	g = graph_create();
 	if (!g)
 		return return_error(e_text, e_size, TOP_E_ALLOC, "");
 	s = name_stack_create("network");
@@ -748,7 +748,7 @@ topologies_graph_compact (void **v, char *e_text, size_t e_size)
 	int res;
 	node_t *node_a, *node_b;
 	graph_t *g = (graph_t *) *v;
-	graph_t *new_g = topologies_graph_create();
+	graph_t *new_g = graph_create();
 	if (new_g == NULL)
 		return return_error(e_text, e_size, TOP_E_ALLOC, "");
 

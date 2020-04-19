@@ -22,9 +22,6 @@ int
 topologies_network_read_string (void *net, char *string,
 	char *e_text, size_t e_size);
 
-graph_t *
-topologies_graph_create (void);
-
 void
 topologies_graph_print (graph_t *g, FILE *stream, bool print_gate_nodes);
 

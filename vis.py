@@ -2,16 +2,26 @@
 # -*- coding: utf-8 -*-
 
 import sys
+import tempfile
 from graph_tool.all import *
+from wrapper import Topologies
 
 if (len(sys.argv) != 2) and (len(sys.argv) != 3):
     sys.exit("usage: vis.py <graph.dot> [ sfdp | fr | arf | plan | rand ]");
 
 try:
-    g = load_graph(sys.argv[1])
+    with open(sys.argv[1], 'r') as cfile:
+        content = cfile.read()
 except:
     sys.exit("couldn't open file");
-    
+
+l = Topologies(content)
+dot = l.network_parse(True, True)
+fp = tempfile.NamedTemporaryFile()
+fp.write(dot.encode())
+fp.seek(0)
+g = load_graph(fp.name, fmt='dot')
+
 if len(sys.argv) == 3:
     if sys.argv[2] == "sfdp":
         pos = sfdp_layout(g)

@@ -18,4 +18,7 @@ graph_are_adjacent (node_t *node_a, node_t *node_b);
 int
 graph_add_edge_name (graph_t *g, char *name_a, char *name_b);
 
+graph_t *
+graph_create (void);
+
 #endif

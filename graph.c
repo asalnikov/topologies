@@ -9,7 +9,7 @@
 #include "errors.h"
 
 graph_t *
-topologies_graph_create (void)
+graph_create (void)
 {
 	graph_t *g = (graph_t *) malloc(sizeof(graph_t));
 	if (!g)
