@@ -21,7 +21,7 @@
 		{
 			"loop": "i",
 			"start": "0",
-			"end": "k - 1",
+			"end": "k",
 			"conn": {
 				"from": "simplevec[i].gate[0]",
 				"to": "simplevec[(i + 1) % k].gate[1]"
@@ -30,7 +30,7 @@
 		{
 			"loop": "i",
 			"start": "0",
-			"end": "k - 1",
+			"end": "k",
 			"conn": {
 				"from": "simplevec[i].gate[2]",
 				"to": "out[i]"
@@ -56,7 +56,7 @@
 		{
 			"loop": "i",
 			"start": "0",
-			"end": "k - 1",
+			"end": "k",
 			"conn": {
 				"from": "ring[0].out[i]",
 				"to": "ring[1].out[i]"
