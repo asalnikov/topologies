@@ -39,6 +39,14 @@
 				}
 			}
 		}
+	},
+	{
+		"from": "simplevec[0]",
+		"to": "simplevec[3]"
+	},
+	{
+		"from": "simplevec[0]",
+		"to": "simplevec[2]"
 	}],
 	"gates": [ { "out": "2" } ]
 }},

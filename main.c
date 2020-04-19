@@ -11,7 +11,6 @@
  * distinguish nodes and routers
  * graph node params in definition
  *
- * connect to the node's next free gate ?
  * pass submodule's module as a param => text variables ?
  *
  * compact network form - in the end
@@ -48,21 +47,21 @@ main (int argc, char *argv[])
 	}
 
 	if (topologies_network_init(&net, e_text, e_size)) {
-		printf("%s\n", e_text);
+		fprintf(stderr, "%s\n", e_text);
 		exit(EXIT_FAILURE);
 	}
 
 	for (int i = 1; i < argc; i++) {
 		if ((res = topologies_network_read_file(net, argv[i], e_text, e_size)))
 		{
-			printf("%s\n", e_text);
+			fprintf(stderr, "%s\n", e_text);
 			exit(EXIT_FAILURE);
 		}
 	}
 
 	void *graph;
 	if (topologies_definition_to_graph(net, &graph, e_text, e_size)) {
-		printf("%s\n", e_text);
+		fprintf(stderr, "%s\n", e_text);
 		topologies_network_destroy(net);
 		exit(EXIT_FAILURE);
 	}
@@ -70,7 +69,7 @@ main (int argc, char *argv[])
 	if (topologies_graph_compact(&graph, e_text, e_size)) {
 		topologies_graph_destroy(graph);
 		topologies_network_destroy(net);
-		printf("%s\n", e_text);
+		fprintf(stderr, "%s\n", e_text);
 		exit(EXIT_FAILURE);
 	}
 	topologies_graph_print(graph, stdout, true);

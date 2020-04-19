@@ -105,12 +105,12 @@ param_stack_enter (param_stack_t *p, raw_param_t *r, char *e_text, size_t e_size
 
 	/* param stack's lifetime is contained in raw params' lifetime */
 	p->params[p->n].name = r->name;
-	p->n++;
-	if ((res = param_stack_eval(p, r->value, &p->params[p->n - 1].value,
+	if ((res = param_stack_eval(p, r->value, &p->params[p->n].value,
 		e_text, e_size)))
 	{
 		return res;
 	}
+	p->n++;
 	return 0;
 }
 

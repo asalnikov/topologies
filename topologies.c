@@ -7,6 +7,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <math.h>
+#include <limits.h>
 #include <sys/stat.h>
 #include <sys/mman.h>
 
@@ -52,6 +53,38 @@ file_close (char *addr, size_t len)
 }
 
 static int
+add_auto_gate (graph_t *g, node_t **r_node, char *node_name, name_stack_t *s)
+{
+	int res;
+	int j;
+	node_t *node = *r_node;
+	if ((res = name_stack_enter(s, node_name, -1))) return res;
+
+	char *auto_name = malloc(18); /* "_auto[2147483647]" */
+	for (j = 0; j < INT_MAX; j++) {
+		sprintf(auto_name, "_auto[%d]", j);
+		bool seen = false;
+		char *full_name = get_full_name(s, auto_name, -1);
+		for (int k = 0; k < node->n_adj; k++) {
+			if (strcmp(g->nodes[node->adj[k]].name, full_name) == 0) 
+			{
+				seen = true;
+			}
+		}
+		free(full_name);
+		if (!seen) break;
+	}
+	char *full_name = get_full_name(s, auto_name, -1);
+	if ((res = graph_add_node(g, full_name, NODE_GATE))) return res;
+	*r_node = graph_find_node(g, full_name);
+	graph_add_edge_ptr(node, *r_node);
+	free(full_name);
+	free(auto_name);
+	name_stack_leave(s);
+	return 0;
+}
+
+static int
 graph_eval_and_add_edge (graph_t *g, param_stack_t *p,
 	name_stack_t *s, connection_wrapper_t *conn,
 	char *e_text, size_t e_size)
@@ -79,7 +112,23 @@ graph_eval_and_add_edge (graph_t *g, param_stack_t *p,
 		free(full_name_a);
 		return return_error(e_text, e_size, TOP_E_ALLOC, "");
 	}
-	if (graph_add_edge_name(g, full_name_a, full_name_b)) {
+
+	node_t *node_a = graph_find_node(g, full_name_a);
+	node_t *node_b = graph_find_node(g, full_name_b);
+	if (node_a == NULL)
+		return_error(e_text, e_size, TOP_E_CONN,
+			" %s %s", full_name_a, full_name_b);
+	if (node_b == NULL)
+		return_error(e_text, e_size, TOP_E_CONN,
+			" %s %s", full_name_a, full_name_b);
+	if (node_a->type == NODE_NODE)
+		if (add_auto_gate(g, &node_a, name_a, s))
+			return return_error(e_text, e_size, TOP_E_ALLOC, "");
+	if (node_b->type == NODE_NODE)
+		if (add_auto_gate(g, &node_b, name_b, s))
+			return return_error(e_text, e_size, TOP_E_ALLOC, "");
+
+	if (graph_add_edge_ptr(node_a, node_b)) {
 		return_error(e_text, e_size, TOP_E_CONN,
 			" %s %s", full_name_a, full_name_b);
 		free(name_a);
@@ -88,10 +137,10 @@ graph_eval_and_add_edge (graph_t *g, param_stack_t *p,
 		free(full_name_b);
 		return TOP_E_CONN;
 	}
-	free(full_name_a);
-	free(full_name_b);
 	free(name_a);
 	free(name_b);
+	free(full_name_a);
+	free(full_name_b);
 	return 0;
 }
 
@@ -182,7 +231,7 @@ traverse_and_add_conns (connection_wrapper_t *c, graph_t *g,
 			return return_error(e_text, e_size, TOP_E_LOOP,
 				"%d > %d\n", start, end);
 		}
-		for (int j = start; j <= end; j++) {
+		for (int j = start; j < end; j++) {
 			if (param_stack_enter_val(p, c->ptr.loop->loop, j))
 				return return_error(e_text, e_size, TOP_E_ALLOC, "");
 			if ((res = traverse_and_add_conns(c->ptr.loop->conn, g,
