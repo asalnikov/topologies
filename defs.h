@@ -115,7 +115,8 @@ typedef struct {
 
 typedef struct {
 	char *condition;
-	submodule_wrapper_t *subm;
+	submodule_wrapper_t *subm_then;
+	submodule_wrapper_t *subm_else;
 } submodule_cond_t;
 
 struct submodule_wrapper {

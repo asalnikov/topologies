@@ -380,6 +380,18 @@ graphs_product (graph_t *g_a, graph_t *g_b, graph_t *g_prod,
 					continue;
 				if (g_a->nodes[i].adj[k] < i) continue;
 
+				name_len = strlen(g_a->nodes[g_a->nodes[i].adj[k]].name) +
+					strlen(g_b->nodes[j].name) + 4;
+				if (name_buf_neigh_cap < name_len) {
+					name_buf_neigh_cap = (1 + name_len / name_buf_blk) *
+						name_buf_blk;
+					name_buf_neigh = realloc(name_buf_neigh,
+						name_buf_neigh_cap);
+					if (!name_buf_neigh) {
+						return return_error(e_text, e_size,
+							TOP_E_ALLOC, "");
+					}
+				}
 				sprintf(name_buf_neigh, "(%s,%s)",
 					g_a->nodes[g_a->nodes[i].adj[k]].name,
 					g_b->nodes[j].name);
@@ -402,6 +414,18 @@ graphs_product (graph_t *g_a, graph_t *g_b, graph_t *g_prod,
 					continue;
 				if (g_b->nodes[j].adj[k] < j) continue;
 
+				name_len = strlen(g_a->nodes[i].name) +
+					strlen(g_b->nodes[g_b->nodes[j].adj[k]].name) + 4;
+				if (name_buf_neigh_cap < name_len) {
+					name_buf_neigh_cap = (1 + name_len / name_buf_blk) *
+						name_buf_blk;
+					name_buf_neigh = realloc(name_buf_neigh,
+						name_buf_neigh_cap);
+					if (!name_buf_neigh) {
+						return return_error(e_text, e_size,
+							TOP_E_ALLOC, "");
+					}
+				}
 				sprintf(name_buf_neigh, "(%s,%s)",
 					g_a->nodes[i].name,
 					g_b->nodes[g_b->nodes[j].adj[k]].name);
@@ -587,7 +611,13 @@ add_submodule (submodule_wrapper_t *smodule,
 		}
 		int condition = lrint(tmp_d);
 		if (condition) {
-			if ((res = add_submodule(sc->subm, net, g, s, p,
+			if ((res = add_submodule(sc->subm_then, net, g, s, p,
+				e_text, e_size)))
+			{
+				return res;
+			}
+		} else if (sc->subm_else) {
+			if ((res = add_submodule(sc->subm_else, net, g, s, p,
 				e_text, e_size)))
 			{
 				return res;
@@ -881,8 +911,12 @@ free_submodule (submodule_wrapper_t *s)
 		}
 		free(s->ptr.subm);
 	} else if (s->type == SUBM_HAS_COND) {
-		free_submodule(s->ptr.cond->subm);
-		free(s->ptr.cond->subm);
+		free_submodule(s->ptr.cond->subm_then);
+		free(s->ptr.cond->subm_then);
+		if (s->ptr.cond->subm_else) {
+			free_submodule(s->ptr.cond->subm_else);
+			free(s->ptr.cond->subm_else);
+		}
 		free(s->ptr.cond->condition);
 		free(s->ptr.cond);
 	} else {

@@ -1,0 +1,64 @@
+[
+{ "simplemodule": {
+	"name": "simple",
+	"gates": [
+		{ "gate": "2" }
+	]
+}},
+
+{ "module": {
+	"name": "ring",
+	"submodules": [
+		{
+			"name": "simplevec",
+			"module": "simple",
+			"size": "len"
+		}
+	],
+	"connections": [
+		{
+			"loop": "i",
+			"start": "0",
+			"end": "len",
+			"conn": {
+				"from": "simplevec[i].gate[0]",
+				"to": "simplevec[(i + 1) % len].gate[1]"
+			}
+		}
+	]
+}},
+
+{ "module": {
+	"name": "prod",
+	"submodules": [ {
+		"if": "depth == 1",
+		"then": { "name": "a", "module": "ring" },
+		"else": {
+			"cartesian": [
+				{
+					"name": "a",
+					"module": "ring"
+				},
+				{
+					"if": "depth > 2",
+					"then": {
+						"name": "p",
+						"module": "prod",
+						"params": [ { "depth": "depth-1" } ]
+					},
+					"else": {
+						"name": "b",
+						"module": "ring"
+					}
+				}
+			]}
+	}
+	]
+}},
+
+
+{ "network": { 
+	"module": "prod",
+	"params": [ { "len": "3" }, { "depth": "3" } ]
+}}
+]

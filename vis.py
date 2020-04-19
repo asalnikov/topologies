@@ -16,7 +16,7 @@ except:
     sys.exit("couldn't open file");
 
 l = Topologies(content)
-dot = l.network_parse(True, True)
+dot = l.network_parse(True, False)
 fp = tempfile.NamedTemporaryFile()
 fp.write(dot.encode())
 fp.seek(0)

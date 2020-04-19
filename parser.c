@@ -240,9 +240,10 @@ parse_submodule (int subobj_n, jsmntok_t *tokens, char *text,
 		{
 			return subres;
 		}
-	} else if ((subobj_n == 2) &&
+	} else if (((subobj_n == 2) || (subobj_n == 3)) &&
 		((json_str_eq(text, &tokens[*i + 1], "if")) ||
-		(json_str_eq(text, &tokens[*i + 1], "subm"))))
+		(json_str_eq(text, &tokens[*i + 1], "then")) ||
+		(json_str_eq(text, &tokens[*i + 1], "else"))))
 	{
 		*i += 1;
 		submodule->type = SUBM_HAS_COND;
@@ -261,22 +262,45 @@ parse_submodule (int subobj_n, jsmntok_t *tokens, char *text,
 						TOP_E_ALLOC, "");
 				}
 				*i += 2;
-			} else if (json_str_eq(text, &tokens[*i], "subm")) {
+			} else if (json_str_eq(text, &tokens[*i], "then")) {
 				*i += 1;
 				if ((tokens[*i].type != JSMN_OBJECT) ||
-					(submodule->ptr.cond->subm != NULL))
+					(submodule->ptr.cond->subm_then != NULL))
 				{
 					return bad_token(*i, &tokens[*i], text,
 						state, e_text, e_size);
 				}
-				submodule->ptr.cond->subm =
+				submodule->ptr.cond->subm_then =
 					calloc(1, sizeof(submodule_wrapper_t));
-				if (!submodule->ptr.cond->subm)
+				if (!submodule->ptr.cond->subm_then)
 					return return_error(e_text, e_size,
 						TOP_E_ALLOC, "");
 				if ((subres = parse_submodule(tokens[*i].size,
 					tokens, text,
-					submodule->ptr.cond->subm, i,
+					submodule->ptr.cond->subm_then, i,
+					e_text, e_size)) != 0)
+				{
+					return subres;
+				}
+			} else if (json_str_eq(text, &tokens[*i], "else")) {
+				if (!submodule->ptr.cond->subm_then)
+					return bad_token(*i, &tokens[*i], text,
+						state, e_text, e_size);
+				*i += 1;
+				if ((tokens[*i].type != JSMN_OBJECT) ||
+					(submodule->ptr.cond->subm_else != NULL))
+				{
+					return bad_token(*i, &tokens[*i], text,
+						state, e_text, e_size);
+				}
+				submodule->ptr.cond->subm_else =
+					calloc(1, sizeof(submodule_wrapper_t));
+				if (!submodule->ptr.cond->subm_else)
+					return return_error(e_text, e_size,
+						TOP_E_ALLOC, "");
+				if ((subres = parse_submodule(tokens[*i].size,
+					tokens, text,
+					submodule->ptr.cond->subm_else, i,
 					e_text, e_size)) != 0)
 				{
 					return subres;
