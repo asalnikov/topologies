@@ -385,7 +385,7 @@ parse_connection (int subobj_n, jsmntok_t *tokens, char *text,
 	int subres;
 	/* at the start, i points at the outermost object */
 	int state = STATE_MODULE_CONNECTION;
-	if ((subobj_n != 2) && (subobj_n != 4)) {
+	if ((subobj_n != 2) && (subobj_n != 3) && (subobj_n != 4)) {
 		return bad_token(*i, &tokens[*i], text, state, e_text, e_size);
 	}
 
@@ -421,7 +421,7 @@ parse_connection (int subobj_n, jsmntok_t *tokens, char *text,
 				return bad_token(*i, &tokens[*i], text, state, e_text, e_size);
 			}
 		}
-	} else if (subobj_n == 2) {
+	} else if ((subobj_n == 2) || (subobj_n == 3)) {
 		connection->type = CONN_HAS_COND;
 		connection->ptr.cond = calloc(1, sizeof(connection_cond_t));
 		if (!connection->ptr.cond)
@@ -437,21 +437,42 @@ parse_connection (int subobj_n, jsmntok_t *tokens, char *text,
 						TOP_E_ALLOC, "");
 				}
 				*i += 2;
-			} else if (json_str_eq(text, &tokens[*i], "conn")) {
+			} else if (json_str_eq(text, &tokens[*i], "then")) {
 				*i += 1;
 				if ((tokens[*i].type != JSMN_OBJECT) ||
-					(connection->ptr.cond->conn != NULL))
+					(connection->ptr.cond->conn_then != NULL))
 				{
 					return bad_token(*i, &tokens[*i], text, state, e_text, e_size);
 				}
-				connection->ptr.cond->conn =
+				connection->ptr.cond->conn_then =
 					calloc(1, sizeof(connection_wrapper_t));
-				if (!connection->ptr.cond->conn)
+				if (!connection->ptr.cond->conn_then)
 					return return_error(e_text, e_size,
 						TOP_E_ALLOC, "");
 				if ((subres = parse_connection(tokens[*i].size,
 					tokens, text,
-					connection->ptr.cond->conn, i,
+					connection->ptr.cond->conn_then, i,
+					e_text, e_size)) != 0)
+				{
+					return subres;
+				}
+			} else if (json_str_eq(text, &tokens[*i], "else")) {
+				if (connection->ptr.cond->conn_then == NULL)
+					return bad_token(*i, &tokens[*i], text, state, e_text, e_size);
+				*i += 1;
+				if ((tokens[*i].type != JSMN_OBJECT) ||
+					(connection->ptr.cond->conn_else != NULL))
+				{
+					return bad_token(*i, &tokens[*i], text, state, e_text, e_size);
+				}
+				connection->ptr.cond->conn_else =
+					calloc(1, sizeof(connection_wrapper_t));
+				if (!connection->ptr.cond->conn_else)
+					return return_error(e_text, e_size,
+						TOP_E_ALLOC, "");
+				if ((subres = parse_connection(tokens[*i].size,
+					tokens, text,
+					connection->ptr.cond->conn_else, i,
 					e_text, e_size)) != 0)
 				{
 					return subres;

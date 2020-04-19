@@ -68,7 +68,8 @@ typedef enum {
 
 typedef struct {
 	char *condition;
-	connection_wrapper_t *conn;
+	connection_wrapper_t *conn_then;
+	connection_wrapper_t *conn_else;
 } connection_cond_t;
 
 typedef struct {

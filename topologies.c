@@ -70,8 +70,8 @@ add_auto_gate (graph_t *g, int *r_n_node, char *node_name, name_stack_t *s)
 				seen = true;
 			}
 		}
-		if (!seen) break;
 		free(full_name);
+		if (!seen) break;
 	}
 	char *full_name = get_full_name(s, auto_name, -1);
 	if ((res = graph_add_node(g, full_name, NODE_GATE))) return res;
@@ -249,7 +249,13 @@ traverse_and_add_conns (connection_wrapper_t *c, graph_t *g,
 		}
 		int condition = lrint(tmp_d);
 		if (condition) {
-			if ((res = traverse_and_add_conns(c->ptr.cond->conn, g,
+			if ((res = traverse_and_add_conns(c->ptr.cond->conn_then, g,
+				p, s, e_text, e_size)))
+			{
+				return res;
+			}
+		} else if (c->ptr.cond->conn_else) {
+			if ((res = traverse_and_add_conns(c->ptr.cond->conn_else, g,
 				p, s, e_text, e_size)))
 			{
 				return res;
@@ -936,8 +942,12 @@ free_connection (connection_wrapper_t *c)
 		free(c->ptr.conn->to);
 		free(c->ptr.conn);
 	} else if (c->type == CONN_HAS_COND) {
-		free_connection(c->ptr.cond->conn);
-		free(c->ptr.cond->conn);
+		free_connection(c->ptr.cond->conn_then);
+		free(c->ptr.cond->conn_then);
+		if (c->ptr.cond->conn_else) {
+			free_connection(c->ptr.cond->conn_else);
+			free(c->ptr.cond->conn_else);
+		}
 		free(c->ptr.cond->condition);
 		free(c->ptr.cond);
 	} else {

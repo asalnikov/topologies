@@ -11,7 +11,7 @@
 	{
 		"name": "simplevec",
 		"module": "simple",
-		"size": "4",
+		"size": "5",
 		"params": [ { "x": "6" } ]
 	},
 	{
@@ -32,7 +32,7 @@
 		"end": "3",
 		"conn": {
 			"if": "i < 2",
-			"conn": {
+			"then": {
 				"loop": "j",
 				"start": "0",
 				"end": "2",
@@ -40,6 +40,10 @@
 					"from": "simplevec[2*i].gate[j]",
 					"to": "simplevec[2*i+1].gate[j]"
 				}
+			},
+			"else": {
+				"from": "condvec",
+				"to": "simplevec[4].gate[0]"
 			}
 		}
 	},
