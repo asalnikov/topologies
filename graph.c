@@ -203,11 +203,13 @@ topologies_graph_string_free (char *string)
 void
 topologies_graph_destroy (graph_t *g)
 {
-	for (int i = 0; i < g->n_nodes; i++) {
-		free(g->nodes[i].name);
-		free(g->nodes[i].adj);
+	if (g->nodes) {
+		for (int i = 0; i < g->n_nodes; i++) {
+			free(g->nodes[i].name);
+			free(g->nodes[i].adj);
+		}
+		free(g->nodes);
 	}
-	free(g->nodes);
 	free(g);
 }
 

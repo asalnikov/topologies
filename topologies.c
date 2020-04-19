@@ -684,11 +684,20 @@ topologies_definition_to_graph (void *v, void **r_g, char *e_text, size_t e_size
 		if ((res = param_stack_enter(p, &net->network->params[i],
 			e_text, e_size)))
 		{
+			param_stack_destroy(p);
+			free(s->name);
+			free(s);
 			return res;
 		}
 	}
 	if ((res = expand_module(g, root_module, net, s, p, e_text, e_size)))
+	{
+		param_stack_destroy(p);
+		topologies_graph_destroy(g);
+		free(s->name);
+		free(s);
 		return res;
+	}
 
 	for (int i = 0; i < net->network->n_params; i++) {
 		param_stack_leave(p);

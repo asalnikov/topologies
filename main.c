@@ -9,8 +9,8 @@
 /* TODO
  * comments!
  * distinguish nodes and routers
+ * graph node params in definition
  *
- * rewrite malloc ?
  * connect to the node's next free gate ?
  * pass submodule's module as a param => text variables ?
  *
@@ -63,20 +63,17 @@ main (int argc, char *argv[])
 	void *graph;
 	if (topologies_definition_to_graph(net, &graph, e_text, e_size)) {
 		printf("%s\n", e_text);
+		topologies_network_destroy(net);
 		exit(EXIT_FAILURE);
 	}
-	//topologies_graph_print(graph, stdout, true);
+	topologies_graph_print(graph, stdout, true);
 	if (topologies_graph_compact(&graph, e_text, e_size)) {
+		topologies_graph_destroy(graph);
+		topologies_network_destroy(net);
 		printf("%s\n", e_text);
 		exit(EXIT_FAILURE);
 	}
-	//topologies_graph_print(graph, stdout, true);
-	char *string = topologies_graph_string(graph, true);
-	if (!string) {
-		exit(EXIT_FAILURE);
-	}
-	printf("%s", string);
-	topologies_graph_string_free(string);
+	topologies_graph_print(graph, stdout, true);
 	topologies_graph_destroy(graph);
 
 	topologies_network_destroy(net);
