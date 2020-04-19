@@ -31,4 +31,5 @@ else:
 vprops = { 'text': g.vertex_properties["label"] }
 
 graph_draw(g, pos=pos, vprops=vprops, vertex_size=10, vertex_font_size=10,
-vertex_text_position=1,vertex_aspect=1,vertex_anchor=0,edge_pen_width=1,output_size=[4024,4024])
+vertex_text_position=1, vertex_aspect=1, vertex_anchor=0, edge_pen_width=1,
+output_size=[4024,4024])

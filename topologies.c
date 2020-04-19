@@ -933,3 +933,9 @@ topologies_network_read_file (void *net, char *filename, char *e_text, size_t e_
 	file_close(addr, file_size);
 	return res;
 }
+
+int
+topologies_network_read_string (void *net, char *addr, char *e_text, size_t e_size)
+{
+	return json_read_file(addr, strlen(addr), net, e_text, e_size);
+}

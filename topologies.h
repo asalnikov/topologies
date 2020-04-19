@@ -2,7 +2,7 @@
 # define TOPOLOGIES_H
 
 int
-topologies_definition_to_graph (void *v, void **r_g, char *e_text,
+topologies_definition_to_graph (void *n, void **g, char *e_text,
 	size_t e_size);
 
 int
@@ -17,6 +17,10 @@ topologies_network_init (void **rnet, char *e_text, size_t e_size);
 int
 topologies_network_read_file (void *net, char *filename, char *e_text,
 	size_t e_size);
+
+int
+topologies_network_read_string (void *net, char *string,
+	char *e_text, size_t e_size);
 
 graph_t *
 topologies_graph_create (void);
