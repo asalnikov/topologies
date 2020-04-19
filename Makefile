@@ -2,25 +2,26 @@ CC = gcc
 CFLAGS = -Wall -Wextra -Werror -Og -g -std=gnu99 \
 	-Wmissing-prototypes -Wstrict-prototypes -Wold-style-definition # -pedantic -Wconversion
 CFLAGS_TINYEXPR = -ansi -Wall -Wshadow -O2
+SRC_DIR = src
 
-OBJFILES = name_stack.o param_stack.o graph.o parser.o topologies.o errors.o
+OBJFILES = $(patsubst %, $(SRC_DIR)/%, name_stack.o param_stack.o graph.o parser.o topologies.o errors.o)
 
-main: main.o libtopologies.so
+main: $(SRC_DIR)/main.o libtopologies.so
 	$(CC) -L. -Wl,-rpath=$(CURDIR) $< -o $@ -ltopologies -lm
 
-libtopologies.so: $(OBJFILES) tinyexpr.o
+libtopologies.so: $(OBJFILES) $(SRC_DIR)/tinyexpr.o
 	$(CC) -shared -fPIC -Wl,--version-script=visibility.map $^ -o $@ -lm
 
-main.o: main.c
+$(SRC_DIR)/main.o: $(SRC_DIR)/main.c
 	$(CC) $(CFLAGS) -c $< -o $@
 
 $(OBJFILES): %.o: %.c
 	$(CC) $(CFLAGS) -fPIC -c $< -o $@
 
-tinyexpr.o: tinyexpr.c
+$(SRC_DIR)/tinyexpr.o: $(SRC_DIR)/tinyexpr.c
 	$(CC) $(CFLAGS_TINYEXPR) -c $^ -o $@
 
 clean:
-	rm -f main *.o *.so
+	rm -f main $(SRC_DIR)/*.o *.so
 
 .PHONY: clean
