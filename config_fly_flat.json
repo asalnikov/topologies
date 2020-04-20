@@ -1,0 +1,66 @@
+[
+{ "simplemodule": {
+	"name": "flat_fly_simple"
+}},
+
+{ "module": {
+	"name": "flat_fly_ring",
+	"submodules": [
+	{
+		"if": "d == 1",
+		"then": {
+			"name": "n",
+			"module": "flat_fly_simple",
+			"size": "k"
+		},
+		"else": {
+			"name": "prev",
+			"module": "flat_fly_ring",
+			"params": [{ "d": "d - 1" }],
+			"size": "k"
+		}
+	}],
+	"connections": [
+		{
+		"if": "d == 1",
+		"then": {
+			"loop": "i",
+			"start": "1",
+			"end": "k",
+			"conn": {
+				"loop": "j",
+				"start": "0",
+				"end": "i",
+				"conn": {
+					"from": "n[i]",
+					"to": "n[j]"
+				}
+			}
+		},
+		"else": {
+			"loop": "l",
+			"start": "0",
+			"end": "k",
+			"conn": {
+				"loop": "i",
+				"start": "1",
+				"end": "k",
+				"conn": {
+					"loop": "j",
+					"start": "0",
+					"end": "i",
+					"conn": {
+						"from": "prev[i].n[l]",
+						"to": "prev[j].n[l]"
+					}
+				}
+			}
+		}
+	}]
+}},
+
+{ "network": {
+	"module": "flat_fly_ring",
+	"params": [ { "k": "4" }, { "d": "2" } ]
+}}
+]
