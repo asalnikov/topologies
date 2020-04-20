@@ -1,4 +1,4 @@
 ```
 make
-vis.py <config.json> [ sfdp | fr | arf | plan | rand ]
+vis.py [--layout [{sfdp,fr,arf,rand}]] file.json [file.json ...]
 ```
