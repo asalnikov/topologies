@@ -1,6 +1,6 @@
 [
 { "simplemodule": {
-	"name": "simple"
+	"name": "gft_simple"
 }},
 
 { "module": {
@@ -8,7 +8,7 @@
 	"submodules": [
 	{
 		"name": "node",
-		"module": "simple",
+		"module": "gft_simple",
 		"size": "w^h"
 	},
 	{

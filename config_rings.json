@@ -1,6 +1,6 @@
 [
 { "simplemodule":
-	{ "name": "simple",
+	{ "name": "rings_simple",
 	  "gates": [
 		{ "gate": "n" }
 	  ]
@@ -8,11 +8,11 @@
 },
 
 { "module":
-	{ "name": "ring",
+	{ "name": "rings_ring",
 	  "submodules": [
 		{
 			"name": "simplevec",
-			"module": "simple",
+			"module": "rings_simple",
 			"size": "k",
 			"params": [ { "n": "3" } ]
 		}
@@ -44,11 +44,11 @@
 },
 
 { "module":
-	{ "name": "outer",
+	{ "name": "rings_outer",
 	  "submodules": [
 		{
 			"name": "ring",
-			"module": "ring",
+			"module": "rings_ring",
 			"size": "2"
 		}
 	  ],
@@ -71,7 +71,7 @@
 
 
 { "network":
-	{ "module": "outer",
+	{ "module": "rings_outer",
 	  "params": [ { "k": "8" } ]
 	}
 }

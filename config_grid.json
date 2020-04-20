@@ -1,17 +1,17 @@
 [
 { "simplemodule": {
-	"name": "simple",
+	"name": "grid_simple",
 	"gates": [
 		{ "gate": "2" }
 	]
 }},
 
 { "module": {
-	"name": "ring",
+	"name": "grid_ring",
 	"submodules": [
 		{
 			"name": "simplevec",
-			"module": "simple",
+			"module": "grid_simple",
 			"size": "len"
 		}
 	],
@@ -29,26 +29,26 @@
 }},
 
 { "module": {
-	"name": "prod",
+	"name": "grid_prod",
 	"submodules": [ {
 		"if": "depth == 1",
-		"then": { "name": "a", "module": "ring" },
+		"then": { "name": "a", "module": "grid_ring" },
 		"else": {
 			"cartesian": [
 				{
 					"name": "a",
-					"module": "ring"
+					"module": "grid_ring"
 				},
 				{
 					"if": "depth > 2",
 					"then": {
 						"name": "p",
-						"module": "prod",
+						"module": "grid_prod",
 						"params": [ { "depth": "depth-1" } ]
 					},
 					"else": {
 						"name": "b",
-						"module": "ring"
+						"module": "grid_ring"
 					}
 				}
 			]}
@@ -58,7 +58,7 @@
 
 
 { "network": { 
-	"module": "prod",
+	"module": "grid_prod",
 	"params": [ { "len": "3" }, { "depth": "3" } ]
 }}
 ]
