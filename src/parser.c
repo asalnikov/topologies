@@ -127,6 +127,7 @@ bad_token (int i, jsmntok_t *tok, char *text, state_t state,
 {
 	unsigned line = 1;
 	unsigned pos_on_line = 1;
+	int res;
 	int type = tok->type;
 	unsigned start_pos = tok->start;
 	for (unsigned j = 0; j < start_pos; j++) {
@@ -137,15 +138,21 @@ bad_token (int i, jsmntok_t *tok, char *text, state_t state,
 		}
 	}
 	char *str;
-	if (json_str_cpy(text, tok, &str)) {
-		return return_error(e_text, e_size, TOP_E_ALLOC, "");
-	}
+	if (tok->end > 0) {
+		if (json_str_cpy(text, tok, &str)) {
+			return return_error(e_text, e_size, TOP_E_ALLOC, "");
+		}
 
-	int res = return_error(e_text, e_size, TOP_E_TOKEN,
-		": unexpected %s token #%d at line %d character %d state %s: %s",
-		token_type_name(type), i, line, pos_on_line, state_name(state),
-		str);
-	free(str);
+		res = return_error(e_text, e_size, TOP_E_TOKEN,
+			": unexpected %s token #%d at line %d character %d state %s: %s",
+			token_type_name(type), i, line, pos_on_line, state_name(state),
+			str);
+		free(str);
+	} else {
+		res = return_error(e_text, e_size, TOP_E_TOKEN,
+			": unexpected %s token #%d at line %d character %d state %s",
+			token_type_name(type), i, line, pos_on_line, state_name(state));
+	}
 	return res;
 }
 
