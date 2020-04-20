@@ -4,54 +4,121 @@
 }},
 
 { "module": {
-	"name": "flat_fly_ring",
+	"name": "flat_fly_1",
 	"submodules": [
 	{
-		"if": "d == 1",
-		"then": {
-			"name": "n",
-			"module": "flat_fly_simple",
-			"size": "k"
-		},
-		"else": {
-			"name": "prev",
-			"module": "flat_fly_ring",
-			"params": [{ "d": "d - 1" }],
-			"size": "k"
-		}
+		"name": "n",
+		"module": "flat_fly_simple",
+		"size": "k1"
 	}],
-	"connections": [
-		{
-		"if": "d == 1",
-		"then": {
+	"connections": [{
+		"loop": "i",
+		"start": "1",
+		"end": "k1",
+		"conn": {
+			"loop": "j",
+			"start": "0",
+			"end": "i",
+			"conn": {
+				"from": "n[i]",
+				"to": "n[j]"
+			}
+		}
+	}]
+}},
+
+{ "module": {
+	"name": "flat_fly_2",
+	"submodules": [{
+		"name": "prev",
+		"module": "flat_fly_1",
+		"size": "k2"
+	}],
+	"connections": [{
+		"loop": "l",
+		"start": "0",
+		"end": "k1",
+		"conn": {
 			"loop": "i",
 			"start": "1",
-			"end": "k",
+			"end": "k2",
 			"conn": {
 				"loop": "j",
 				"start": "0",
 				"end": "i",
 				"conn": {
-					"from": "n[i]",
-					"to": "n[j]"
+					"from": "prev[i].n[l]",
+					"to": "prev[j].n[l]"
 				}
 			}
-		},
-		"else": {
-			"loop": "l",
+		}
+	}]
+}},
+
+{ "module": {
+	"name": "flat_fly_3",
+	"submodules": [{
+		"name": "prev",
+		"module": "flat_fly_2",
+		"size": "k3"
+	}],
+	"connections": [{
+		"loop": "l1",
+		"start": "0",
+		"end": "k1",
+		"conn": {
+			"loop": "l2",
 			"start": "0",
-			"end": "k",
+			"end": "k2",
 			"conn": {
 				"loop": "i",
 				"start": "1",
-				"end": "k",
+				"end": "k3",
 				"conn": {
 					"loop": "j",
 					"start": "0",
 					"end": "i",
 					"conn": {
-						"from": "prev[i].n[l]",
-						"to": "prev[j].n[l]"
+						"from": "prev[i].prev[l2].n[l1]",
+						"to": "prev[j].prev[l2].n[l1]"
+					}
+				}
+			}
+		}
+	}]
+}},
+
+{ "module": {
+	"name": "flat_fly_4",
+	"submodules": [{
+		"name": "prev",
+		"module": "flat_fly_3",
+		"size": "k4"
+	}],
+	"connections": [{
+		"loop": "l1",
+		"start": "0",
+		"end": "k1",
+		"conn": {
+			"loop": "l2",
+			"start": "0",
+			"end": "k2",
+			"conn": {
+				"loop": "l3",
+				"start": "0",
+				"end": "k3",
+				"conn": {
+					"loop": "i",
+					"start": "1",
+					"end": "k4",
+					"conn": {
+						"loop": "j",
+						"start": "0",
+						"end": "i",
+						"conn": {
+							"from": "prev[i].prev[l3].prev[l2].n[l1]",
+							"to": "prev[j].prev[l3].prev[l2].n[l1]"
+						}
 					}
 				}
 			}
@@ -60,7 +127,7 @@
 }},
 
 { "network": {
-	"module": "flat_fly_ring",
-	"params": [ { "k": "4" }, { "d": "2" } ]
+	"module": "flat_fly_3",
+	"params": [ { "k1": "3" }, { "k2": "3" }, { "k3": "3" } ]
 }}
 ]
