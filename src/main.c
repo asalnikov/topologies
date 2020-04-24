@@ -8,8 +8,13 @@
 
 /* TODO
  * comments!
- * distinguish nodes and routers
+ * node and edge attributes
  * graph node params in definition
+ * disallow self loops and multi edges
+ * tensor product, corona product, rooted product, lexicographic product
+ * exceptions
+ * "index" variable for its index in the vector
+ * library for common stuff
  *
  * pass submodule's module as a param => text variables ?
  *
