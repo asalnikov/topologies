@@ -10,12 +10,18 @@ typedef enum {
 } node_type;
 
 typedef struct {
+	int n;
+	char *attributes;
+} edge_t;
+
+typedef struct {
 	char *name;
 	int n;
-	int *adj;
+	edge_t *adj;
 	int n_adj;
 	int cap_adj;
 	node_type type;
+	char *attributes;
 } node_t;
 
 typedef struct {
@@ -82,6 +88,7 @@ typedef struct {
 typedef struct {
 	char *from;
 	char *to;
+	char *attributes;
 } connection_plain_t;
 
 struct connection_wrapper {
@@ -150,6 +157,7 @@ typedef struct {
 	connection_wrapper_t *connections;
 	int n_connections;
 	module_type_t type;
+	char *attributes;
 } module_t;
 
 typedef struct {

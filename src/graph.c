@@ -39,7 +39,8 @@ graph_add_node (graph_t *g, char *name, node_type type)
 	if (!g->nodes[i].name)
 		return TOP_E_ALLOC;
 	strncpy(g->nodes[i].name, name, strlen(name) + 1);
-	g->nodes[i].adj = (int *) malloc(ADJ_BLK_SIZE * sizeof(int));
+	g->nodes[i].adj = (edge_t *) malloc(ADJ_BLK_SIZE * sizeof(edge_t));
+	memset(g->nodes[i].adj, 0, ADJ_BLK_SIZE * sizeof(edge_t));
 	if (!g->nodes[i].adj)
 		return TOP_E_ALLOC;
 	g->nodes[i].n_adj = 0;
@@ -70,23 +71,29 @@ graph_add_edge_id (graph_t *g, int n_a, int n_b)
 	int i = node_a->n_adj;
 	if (node_a->n_adj == node_a->cap_adj) {
 		node_a->cap_adj += ADJ_BLK_SIZE;
-		node_a->adj = (int *) realloc(node_a->adj,
-			node_a->cap_adj * sizeof(int));
+		node_a->adj = (edge_t *) realloc(node_a->adj,
+			node_a->cap_adj * sizeof(edge_t));
 		if (!node_a->adj)
 			return TOP_E_ALLOC;
+		memset(node_a->adj + (node_a->cap_adj - ADJ_BLK_SIZE), 0,
+			ADJ_BLK_SIZE * sizeof(edge_t));
 	}
-	node_a->adj[i] = node_b->n;
+	node_a->adj[i].n = node_b->n;
+	node_a->adj[i].attributes = NULL;
 	node_a->n_adj++;
 
 	i = node_b->n_adj;
 	if (node_b->n_adj == node_b->cap_adj) {
 		node_b->cap_adj += ADJ_BLK_SIZE;
-		node_b->adj = (int *) realloc(node_b->adj,
-			node_b->cap_adj * sizeof(int));
+		node_b->adj = (edge_t *) realloc(node_b->adj,
+			node_b->cap_adj * sizeof(edge_t));
 		if (!node_b->adj)
 			return TOP_E_ALLOC;
+		memset(node_b->adj + (node_b->cap_adj - ADJ_BLK_SIZE), 0,
+			ADJ_BLK_SIZE * sizeof(edge_t));
 	}
-	node_b->adj[i] = node_a->n;
+	node_b->adj[i].n = node_a->n;
+	node_a->adj[i].attributes = NULL;
 	node_b->n_adj++;
 
 	return 0;
@@ -97,7 +104,7 @@ graph_are_adjacent (node_t *node_a, node_t *node_b)
 {
 	if (!node_a || !node_b) return false;
 	for (int j = 0; j < node_a->n_adj; j++) {
-		if (node_a->adj[j] == node_b->n)
+		if (node_a->adj[j].n == node_b->n)
 			return true;
 	}
 	return false;
@@ -121,21 +128,28 @@ topologies_graph_print (graph_t *g, FILE *stream, bool print_gate_nodes)
 {
 	fprintf(stream, "graph g {\n");
 	for (int i = 0; i < g->n_nodes; i++) {
-		if ((g->nodes[i].type == NODE_NODE) || print_gate_nodes)
-			fprintf(stream, "n%d [label=\"%s\"];\n",
+		if ((g->nodes[i].type == NODE_NODE) || print_gate_nodes) {
+			fprintf(stream, "n%d [label=\"%s\"",
 				i, g->nodes[i].name);
+			if (g->nodes[i].attributes)
+				fprintf(stream, ", %s", g->nodes[i].attributes);
+			fprintf(stream, "];\n");
+		}
 	}
 	for (int i = 0; i < g->n_nodes; i++) {
 		if ((g->nodes[i].type != NODE_NODE) && !print_gate_nodes)
 			continue;
 		for (int j = 0; j < g->nodes[i].n_adj; j++) {
-			if (i > g->nodes[i].adj[j]) continue;
+			if (i > g->nodes[i].adj[j].n) continue;
 			if (!print_gate_nodes &&
-				g->nodes[g->nodes[i].adj[j]].type != NODE_NODE)
+				g->nodes[g->nodes[i].adj[j].n].type != NODE_NODE)
 			{
 				continue;
 			}
-			fprintf(stream, "n%d -- n%d;\n", i, g->nodes[i].adj[j]);
+			fprintf(stream, "n%d -- n%d", i, g->nodes[i].adj[j].n);
+			if (g->nodes[i].adj[j].attributes)
+				fprintf(stream, " [%s]", g->nodes[i].adj[j].attributes);
+			fprintf(stream, ";\n");
 		}
 	}
 	fprintf(stream, "}\n");
@@ -148,22 +162,28 @@ topologies_graph_string (graph_t *g, bool print_gate_nodes)
 
 	buf_len += snprintf(0, 0, "graph g {\n");
 	for (int i = 0; i < g->n_nodes; i++) {
-		if ((g->nodes[i].type == NODE_NODE) || print_gate_nodes)
-			buf_len += snprintf(0, 0, "n%d [label=\"%s\"];\n",
+		if ((g->nodes[i].type == NODE_NODE) || print_gate_nodes) {
+			buf_len += snprintf(0, 0, "n%d [label=\"%s\"",
 				i, g->nodes[i].name);
+			if (g->nodes[i].attributes)
+				buf_len += snprintf(0, 0, ", %s", g->nodes[i].attributes);
+			buf_len += snprintf(0, 0, "];\n");
+		}
 	}
 	for (int i = 0; i < g->n_nodes; i++) {
 		if ((g->nodes[i].type != NODE_NODE) && !print_gate_nodes)
 			continue;
 		for (int j = 0; j < g->nodes[i].n_adj; j++) {
-			if (i > g->nodes[i].adj[j]) continue;
+			if (i > g->nodes[i].adj[j].n) continue;
 			if (!print_gate_nodes &&
-				g->nodes[g->nodes[i].adj[j]].type != NODE_NODE)
+				g->nodes[g->nodes[i].adj[j].n].type != NODE_NODE)
 			{
 				continue;
 			}
-			buf_len += snprintf(0, 0, "n%d -- n%d;\n", i,
-				g->nodes[i].adj[j]);
+			buf_len += snprintf(0, 0, "n%d -- n%d", i, g->nodes[i].adj[j].n);
+			if (g->nodes[i].adj[j].attributes)
+				buf_len += snprintf(0, 0, " [%s]", g->nodes[i].adj[j].attributes);
+			buf_len += snprintf(0, 0, ";\n");
 		}
 	}
 	buf_len += snprintf(0, 0, "}\n");
@@ -174,22 +194,32 @@ topologies_graph_string (graph_t *g, bool print_gate_nodes)
 	buf_len = 0;
 	buf_len += sprintf(buf, "graph g {\n");
 	for (int i = 0; i < g->n_nodes; i++) {
-		if ((g->nodes[i].type == NODE_NODE) || print_gate_nodes)
-			buf_len += sprintf(buf + buf_len, "n%d [label=\"%s\"];\n",
+		if ((g->nodes[i].type == NODE_NODE) || print_gate_nodes) {
+			buf_len += sprintf(buf + buf_len, "n%d [label=\"%s\"",
 				i, g->nodes[i].name);
+			if (g->nodes[i].attributes) {
+				buf_len += sprintf(buf + buf_len, ", %s",
+					g->nodes[i].attributes);
+			}
+			buf_len += sprintf(buf + buf_len, "];\n");
+		}
 	}
 	for (int i = 0; i < g->n_nodes; i++) {
 		if ((g->nodes[i].type != NODE_NODE) && !print_gate_nodes)
 			continue;
 		for (int j = 0; j < g->nodes[i].n_adj; j++) {
-			if (i > g->nodes[i].adj[j]) continue;
+			if (i > g->nodes[i].adj[j].n) continue;
 			if (!print_gate_nodes &&
-				g->nodes[g->nodes[i].adj[j]].type != NODE_NODE)
+				g->nodes[g->nodes[i].adj[j].n].type != NODE_NODE)
 			{
 				continue;
 			}
-			buf_len += sprintf(buf + buf_len, "n%d -- n%d;\n", i,
-				g->nodes[i].adj[j]);
+			buf_len += sprintf(buf + buf_len, "n%d -- n%d", i, g->nodes[i].adj[j].n);
+			if (g->nodes[i].adj[j].attributes) {
+				buf_len += sprintf(buf + buf_len, " [%s]",
+					g->nodes[i].adj[j].attributes);
+			}
+			buf_len += sprintf(buf + buf_len, ";\n");
 		}
 	}
 	buf_len += sprintf(buf + buf_len, "}\n");
@@ -208,6 +238,10 @@ topologies_graph_destroy (graph_t *g)
 	if (g->nodes) {
 		for (int i = 0; i < g->n_nodes; i++) {
 			free(g->nodes[i].name);
+			for (int j = 0; j < g->nodes[i].n_adj; j++) {
+				if (g->nodes[i].adj[j].attributes)
+					free(g->nodes[i].adj[j].attributes);
+			}
 			free(g->nodes[i].adj);
 		}
 		free(g->nodes);

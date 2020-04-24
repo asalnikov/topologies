@@ -66,7 +66,7 @@ add_auto_gate (graph_t *g, int *r_n_node, char *node_name, name_stack_t *s)
 		bool seen = false;
 		char *full_name = get_full_name(s, auto_name, -1);
 		for (int k = 0; k < g->nodes[n_node].n_adj; k++) {
-			if (strcmp(g->nodes[g->nodes[n_node].adj[k]].name,
+			if (strcmp(g->nodes[g->nodes[n_node].adj[k].n].name,
 				full_name) == 0)
 			{
 				seen = true;
@@ -311,10 +311,10 @@ graphs_product (graph_t *g_a, graph_t *g_b, graph_t *g_prod,
 				return return_error(e_text, e_size, TOP_E_ALLOC, "");
 
 			for (int k = 0; k < g_a->nodes[i].n_adj; k++) {
-				if (g_a->nodes[g_a->nodes[i].adj[k]].type != NODE_GATE)
+				if (g_a->nodes[g_a->nodes[i].adj[k].n].type != NODE_GATE)
 					continue;
 				name_len = strlen(name_buf) +
-					strlen(g_a->nodes[g_a->nodes[i].adj[k]].name) + 2;
+					strlen(g_a->nodes[g_a->nodes[i].adj[k].n].name) + 2;
 				if (name_buf_neigh_cap < name_len) {
 					name_buf_neigh_cap = (1 + name_len / name_buf_blk) *
 						name_buf_blk;
@@ -326,7 +326,7 @@ graphs_product (graph_t *g_a, graph_t *g_b, graph_t *g_prod,
 					}
 				}
 				sprintf(name_buf_neigh, "%s.%s", name_buf,
-					g_a->nodes[g_a->nodes[i].adj[k]].name);
+					g_a->nodes[g_a->nodes[i].adj[k].n].name);
 				if (graph_add_node(g_prod, name_buf_neigh, NODE_GATE))
 					return return_error(e_text, e_size, TOP_E_ALLOC, "");
 				if ((res = graph_add_edge_name(g_prod, name_buf,
@@ -343,10 +343,10 @@ graphs_product (graph_t *g_a, graph_t *g_b, graph_t *g_prod,
 			}
 
 			for (int k = 0; k < g_b->nodes[j].n_adj; k++) {
-				if (g_b->nodes[g_b->nodes[j].adj[k]].type != NODE_GATE)
+				if (g_b->nodes[g_b->nodes[j].adj[k].n].type != NODE_GATE)
 					continue;
 				name_len = strlen(name_buf) +
-					strlen(g_b->nodes[g_b->nodes[j].adj[k]].name) + 2;
+					strlen(g_b->nodes[g_b->nodes[j].adj[k].n].name) + 2;
 				if (name_buf_neigh_cap < name_len) {
 					name_buf_neigh_cap = (1 + name_len / name_buf_blk) *
 						name_buf_blk;
@@ -358,7 +358,7 @@ graphs_product (graph_t *g_a, graph_t *g_b, graph_t *g_prod,
 					}
 				}
 				sprintf(name_buf_neigh, "%s.%s", name_buf,
-					g_b->nodes[g_b->nodes[j].adj[k]].name);
+					g_b->nodes[g_b->nodes[j].adj[k].n].name);
 				if (graph_add_node(g_prod, name_buf_neigh, NODE_GATE))
 					return return_error(e_text, e_size, TOP_E_ALLOC, "");
 				if ((res = graph_add_edge_name(g_prod, name_buf,
@@ -385,11 +385,12 @@ graphs_product (graph_t *g_a, graph_t *g_b, graph_t *g_prod,
 				g_b->nodes[j].name);
 
 			for (int k = 0; k < g_a->nodes[i].n_adj; k++) {
-				if (g_a->nodes[g_a->nodes[i].adj[k]].type != NODE_NODE)
+				if (g_a->nodes[g_a->nodes[i].adj[k].n].type != NODE_NODE)
 					continue;
-				if (g_a->nodes[i].adj[k] < i) continue;
+				if (g_a->nodes[i].adj[k].n < i) continue;
 
-				name_len = strlen(g_a->nodes[g_a->nodes[i].adj[k]].name) +
+				name_len =
+					strlen(g_a->nodes[g_a->nodes[i].adj[k].n].name) +
 					strlen(g_b->nodes[j].name) + 4;
 				if (name_buf_neigh_cap < name_len) {
 					name_buf_neigh_cap = (1 + name_len / name_buf_blk) *
@@ -402,7 +403,7 @@ graphs_product (graph_t *g_a, graph_t *g_b, graph_t *g_prod,
 					}
 				}
 				sprintf(name_buf_neigh, "(%s,%s)",
-					g_a->nodes[g_a->nodes[i].adj[k]].name,
+					g_a->nodes[g_a->nodes[i].adj[k].n].name,
 					g_b->nodes[j].name);
 
 				if ((res = graph_add_edge_name(g_prod, name_buf,
@@ -419,12 +420,12 @@ graphs_product (graph_t *g_a, graph_t *g_b, graph_t *g_prod,
 			}
 
 			for (int k = 0; k < g_b->nodes[j].n_adj; k++) {
-				if (g_b->nodes[g_b->nodes[j].adj[k]].type != NODE_NODE)
+				if (g_b->nodes[g_b->nodes[j].adj[k].n].type != NODE_NODE)
 					continue;
-				if (g_b->nodes[j].adj[k] < j) continue;
+				if (g_b->nodes[j].adj[k].n < j) continue;
 
 				name_len = strlen(g_a->nodes[i].name) +
-					strlen(g_b->nodes[g_b->nodes[j].adj[k]].name) + 4;
+					strlen(g_b->nodes[g_b->nodes[j].adj[k].n].name) + 4;
 				if (name_buf_neigh_cap < name_len) {
 					name_buf_neigh_cap = (1 + name_len / name_buf_blk) *
 						name_buf_blk;
@@ -437,7 +438,7 @@ graphs_product (graph_t *g_a, graph_t *g_b, graph_t *g_prod,
 				}
 				sprintf(name_buf_neigh, "(%s,%s)",
 					g_a->nodes[i].name,
-					g_b->nodes[g_b->nodes[j].adj[k]].name);
+					g_b->nodes[g_b->nodes[j].adj[k].n].name);
 
 				if ((res = graph_add_edge_name(g_prod, name_buf,
 					name_buf_neigh)))
@@ -500,9 +501,10 @@ graph_insert (graph_t *g, graph_t *g_prod, name_stack_t *s,
 		return return_error(e_text, e_size, TOP_E_ALLOC, "");
 	for (int i = 0; i < g_prod->n_nodes; i++) {
 		for (int j = 0; j < g_prod->nodes[i].n_adj; j++) {
-			if (i < g_prod->nodes[i].adj[j]) continue;
+			if (i < g_prod->nodes[i].adj[j].n) continue;
 			sprintf(name_buf, "%s.%s", stack_name, g_prod->nodes[i].name);
-			sprintf(name_buf_2, "%s.%s", stack_name, g_prod->nodes[g_prod->nodes[i].adj[j]].name);
+			sprintf(name_buf_2, "%s.%s", stack_name,
+				g_prod->nodes[g_prod->nodes[i].adj[j].n].name);
 			if ((res = graph_add_edge_name(g, name_buf, name_buf_2))) {
 				if (res == TOP_E_CONN) {
 					return_error(e_text, e_size, TOP_E_CONN,
@@ -811,24 +813,24 @@ graph_find_end_and_mark (graph_t *g, int prev, int n, int *n_node_res,
 			return return_error(e_text,
 				e_size, TOP_E_BADGATE, ": %s", node_tmp->name);
 		}
-		if (g->nodes[node_tmp->adj[0]].type == NODE_GATE) {
+		if (g->nodes[node_tmp->adj[0].n].type == NODE_GATE) {
 			node_tmp->type = NODE_GATE_VISITED;
-			node_tmp = &(g->nodes[node_tmp->adj[0]]);
-		} else if ((g->nodes[node_tmp->adj[0]].type == NODE_NODE) &&
-			(node_tmp->adj[0] != prev))
+			node_tmp = &(g->nodes[node_tmp->adj[0].n]);
+		} else if ((g->nodes[node_tmp->adj[0].n].type == NODE_NODE) &&
+			(node_tmp->adj[0].n != prev))
 		{
 			node_tmp->type = NODE_GATE_VISITED;
-			node_tmp = &(g->nodes[node_tmp->adj[0]]);
+			node_tmp = &(g->nodes[node_tmp->adj[0].n]);
 			break;
 		} else {
 			if (node_tmp->n_adj == 1) {
 				break;
-			} else if (g->nodes[node_tmp->adj[1]].type == NODE_GATE) {
+			} else if (g->nodes[node_tmp->adj[1].n].type == NODE_GATE) {
 				node_tmp->type = NODE_GATE_VISITED;
-				node_tmp = &(g->nodes[node_tmp->adj[1]]);
+				node_tmp = &(g->nodes[node_tmp->adj[1].n]);
 			} else {
 				node_tmp->type = NODE_GATE_VISITED;
-				node_tmp = &(g->nodes[node_tmp->adj[1]]);
+				node_tmp = &(g->nodes[node_tmp->adj[1].n]);
 				break;
 			}
 		}
@@ -853,9 +855,9 @@ topologies_graph_compact (void **v, char *e_text, size_t e_size)
 			continue;
 
 		for (int j = 0; j < g->nodes[i].n_adj; j++) {
-			if (g->nodes[g->nodes[i].adj[j]].type == NODE_GATE) {
+			if (g->nodes[g->nodes[i].adj[j].n].type == NODE_GATE) {
 				res = graph_find_end_and_mark(g, i,
-					g->nodes[i].adj[j], &n_node_a, e_text, e_size);
+					g->nodes[i].adj[j].n, &n_node_a, e_text, e_size);
 				if (res) {
 					topologies_graph_destroy(new_g);
 					return res;
@@ -885,14 +887,14 @@ topologies_graph_compact (void **v, char *e_text, size_t e_size)
 		if (g->nodes[i].type == NODE_GATE_VISITED)
 			continue;
 		for (int j = 0; j < g->nodes[i].n_adj; j++) {
-			if ((i < g->nodes[i].adj[j]) &&
-				(g->nodes[g->nodes[i].adj[j]].type !=
+			if ((i < g->nodes[i].adj[j].n) &&
+				(g->nodes[g->nodes[i].adj[j].n].type !=
 				NODE_GATE_VISITED))
 			{
 				n_node_a = graph_find_node(new_g,
 					g->nodes[i].name);
 				n_node_b = graph_find_node(new_g,
-					g->nodes[g->nodes[i].adj[j]].name);
+					g->nodes[g->nodes[i].adj[j].n].name);
 				graph_add_edge_id(new_g, n_node_a, n_node_b);
 			}
 		}
