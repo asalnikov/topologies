@@ -621,12 +621,21 @@ add_submodule (submodule_wrapper_t *smodule,
 			size = lrint(size_d);
 		}
 		if (size > 0) {
+			char index[11];
+			raw_param_t tmp_raw_param = { "index", index };
 			for (int j = 0; j < size; j++) {
+				sprintf(index, "%d", j);
+				if ((res = param_stack_enter(p, &tmp_raw_param, e_text,
+					e_size)))
+				{
+					return res;
+				}
 				if ((res = enter_and_expand_module(net, g, s, p,
 					sm, j, e_text, e_size)))
 				{
 					return res;
 				}
+				param_stack_leave(p);
 			}
 		} else {
 			if ((res = enter_and_expand_module(net, g, s, p, sm, -1,
