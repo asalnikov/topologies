@@ -76,7 +76,7 @@ add_auto_gate (graph_t *g, int *r_n_node, char *node_name, name_stack_t *s)
 		if (!seen) break;
 	}
 	char *full_name = get_full_name(s, auto_name, -1);
-	if ((res = graph_add_node(g, full_name, NODE_GATE))) return res;
+	if ((res = graph_add_node(g, full_name, NODE_GATE, NULL))) return res;
 	*r_n_node = graph_find_node(g, full_name);
 	graph_add_edge_id(g, n_node, *r_n_node, NULL);
 	free(full_name);
@@ -163,7 +163,7 @@ add_gate (graph_t *g, name_stack_t *s, char *name_s,
 	char *full_name = get_full_name(s, gate->name, j);
 	if (!full_name)
 		return return_error(e_text, e_size, TOP_E_ALLOC, "");
-	if (graph_add_node(g, full_name, NODE_GATE)) {
+	if (graph_add_node(g, full_name, NODE_GATE, NULL)) {
 		free(full_name);
 		return return_error(e_text, e_size, TOP_E_ALLOC, "");
 	}
@@ -307,8 +307,27 @@ graphs_product (graph_t *g_a, graph_t *g_b, graph_t *g_prod,
 
 			sprintf(name_buf, "(%s,%s)", g_a->nodes[i].name,
 				g_b->nodes[j].name);
-			if (graph_add_node(g_prod, name_buf, NODE_NODE))
+			char *attrs;
+			if (g_a->nodes[i].attributes &&
+				g_b->nodes[j].attributes)
+			{
+				int attrs_len = strlen(g_a->nodes[i].attributes) +
+					strlen(g_b->nodes[j].attributes) + 3;
+				attrs = malloc(attrs_len);
+				if (!attrs)
+					return return_error(e_text, e_size, TOP_E_ALLOC, "");
+				sprintf(attrs, "%s, %s",
+					g_a->nodes[i].attributes,
+					g_b->nodes[j].attributes);
+			} else if (g_a->nodes[i].attributes) {
+				attrs = g_a->nodes[i].attributes;
+			} else {
+				attrs = g_b->nodes[j].attributes;
+			}
+			if (graph_add_node(g_prod, name_buf, NODE_NODE, attrs))
 				return return_error(e_text, e_size, TOP_E_ALLOC, "");
+			if (g_a->nodes[i].attributes && g_b->nodes[j].attributes)
+				free(attrs);
 
 			for (int k = 0; k < g_a->nodes[i].n_adj; k++) {
 				if (g_a->nodes[g_a->nodes[i].adj[k].n].type != NODE_GATE)
@@ -327,7 +346,7 @@ graphs_product (graph_t *g_a, graph_t *g_b, graph_t *g_prod,
 				}
 				sprintf(name_buf_neigh, "%s.%s", name_buf,
 					g_a->nodes[g_a->nodes[i].adj[k].n].name);
-				if (graph_add_node(g_prod, name_buf_neigh, NODE_GATE))
+				if (graph_add_node(g_prod, name_buf_neigh, NODE_GATE, NULL))
 					return return_error(e_text, e_size, TOP_E_ALLOC, "");
 				if ((res = graph_add_edge_name(g_prod, name_buf,
 					name_buf_neigh,
@@ -360,7 +379,7 @@ graphs_product (graph_t *g_a, graph_t *g_b, graph_t *g_prod,
 				}
 				sprintf(name_buf_neigh, "%s.%s", name_buf,
 					g_b->nodes[g_b->nodes[j].adj[k].n].name);
-				if (graph_add_node(g_prod, name_buf_neigh, NODE_GATE))
+				if (graph_add_node(g_prod, name_buf_neigh, NODE_GATE, NULL))
 					return return_error(e_text, e_size, TOP_E_ALLOC, "");
 				if ((res = graph_add_edge_name(g_prod, name_buf,
 					name_buf_neigh,
@@ -494,7 +513,8 @@ graph_insert (graph_t *g, graph_t *g_prod, name_stack_t *s,
 		sprintf(name_buf, "%s.%s", stack_name, g_prod->nodes[i].name);
 
 		if (graph_add_node(g, name_buf,
-			g_prod->nodes[i].type))
+			g_prod->nodes[i].type,
+			g_prod->nodes[i].attributes))
 		{
 			return return_error(e_text, e_size, TOP_E_ALLOC, "");
 		}
@@ -658,18 +678,9 @@ expand_module (graph_t *g, module_t *module, network_definition_t *net,
 		char *name_s = name_stack_name(s);
 		if (!name_s)
 			return return_error(e_text, e_size, TOP_E_ALLOC, "");
-		if (graph_add_node(g, name_s, NODE_NODE)) {
+		if (graph_add_node(g, name_s, NODE_NODE, module->attributes)) {
 			free(name_s);
 			return return_error(e_text, e_size, TOP_E_ALLOC, "");
-		}
-		if (module->attributes) {
-			char *node_attrs = malloc(strlen(module->attributes) + 1);
-			if (!node_attrs)
-				return return_error(e_text, e_size, TOP_E_ALLOC, "");
-			strncpy(node_attrs, module->attributes, strlen(module->attributes) + 1);
-			g->nodes[graph_find_node(g, name_s)].attributes = node_attrs;
-		} else {
-			g->nodes[graph_find_node(g, name_s)].attributes = NULL;
 		}
 		for (int i = 0; i < module->n_gates; i++) {
 			double size_d;
@@ -714,7 +725,7 @@ expand_module (graph_t *g, module_t *module, network_definition_t *net,
 					module->gates[i].name, -1);
 				if (!full_name)
 					return return_error(e_text, e_size, TOP_E_ALLOC, "");
-				if (graph_add_node(g, full_name, NODE_GATE))
+				if (graph_add_node(g, full_name, NODE_GATE, NULL))
 					return return_error(e_text, e_size, TOP_E_ALLOC, "");
 				free(full_name);
 			} else {
@@ -723,7 +734,7 @@ expand_module (graph_t *g, module_t *module, network_definition_t *net,
 						module->gates[i].name, j);
 					if (!full_name)
 						return return_error(e_text, e_size, TOP_E_ALLOC, "");
-					if (graph_add_node(g, full_name, NODE_GATE))
+					if (graph_add_node(g, full_name, NODE_GATE, NULL))
 						return return_error(e_text, e_size, TOP_E_ALLOC, "");
 					free(full_name);
 				}
@@ -906,7 +917,7 @@ topologies_graph_compact (void **v, char *e_text, size_t e_size)
 			continue;
 		if (g->nodes[i].n_adj == 0)
 			continue;
-		if (graph_add_node(new_g, g->nodes[i].name, g->nodes[i].type))
+		if (graph_add_node(new_g, g->nodes[i].name, g->nodes[i].type, g->nodes[i].attributes))
 			return return_error(e_text, e_size, TOP_E_ALLOC, "");
 	}
 	for (int i = 0; i < g->n_nodes; i++) {

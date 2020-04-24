@@ -5,6 +5,12 @@
 	"gates": [ { "gate": "k" } ]
 }},
 
+{ "simplemodule": {
+	"name": "simple_b",
+	"attributes": "orientation=45",
+	"gates": [ { "gate": "k" } ]
+}},
+
 { "module": {
 	"name": "net",
 	"params": [ { "k": "2" } ],
@@ -15,6 +21,18 @@
 		"size": "5",
 		"params": [ { "x": "6" } ]
 	},
+	{"cartesian": [
+		{
+			"name": "vec_a",
+			"module": "simple",
+			"size": "2"
+		},
+		{
+			"name": "vec_b",
+			"module": "simple_b",
+			"size": "1"
+		}
+	]},
 	{
 		"if": "qqq > 3",
 		"then": {

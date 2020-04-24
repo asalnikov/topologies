@@ -4,7 +4,7 @@
 #include "defs.h"
 
 int
-graph_add_node (graph_t *g, char *name, node_type type);
+graph_add_node (graph_t *g, char *name, node_type type, char *attrs);
 
 int
 graph_find_node (graph_t *g, char *name);

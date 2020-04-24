@@ -8,9 +8,6 @@
 
 /* TODO
  * comments!
- * node and edge attributes
- * graph node params in definition
- * disallow self loops and multi edges
  * tensor product, corona product, rooted product, lexicographic product
  * exceptions
  * "index" variable for its index in the vector
@@ -77,7 +74,7 @@ main (int argc, char *argv[])
 		fprintf(stderr, "%s\n", e_text);
 		exit(EXIT_FAILURE);
 	}
-	topologies_graph_print(graph, stdout, true);
+	topologies_graph_print(graph, stdout, false);
 	topologies_graph_destroy(graph);
 
 	topologies_network_destroy(net);
