@@ -243,6 +243,8 @@ topologies_graph_destroy (graph_t *g)
 					free(g->nodes[i].adj[j].attributes);
 			}
 			free(g->nodes[i].adj);
+			if (g->nodes[i].attributes)
+				free(g->nodes[i].attributes);
 		}
 		free(g->nodes);
 	}

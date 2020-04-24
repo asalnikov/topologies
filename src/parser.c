@@ -735,10 +735,27 @@ json_deserialize (jsmntok_t *tokens, int n_tokens, char *text,
 				if ((m[m_i].name != NULL) ||
 					(tokens[i + 1].type != JSMN_STRING))
 				{
-					return bad_token(i + 1, &tokens[i + 1], text, state, e_text, e_size);
+					return bad_token(i + 1, &tokens[i + 1],
+						text, state, e_text, e_size);
 				}
 				if (json_str_cpy(text, &tokens[i + 1],
 					&m[m_i].name))
+				{
+					return return_error(e_text, e_size, TOP_E_ALLOC, "");
+				}
+				obj_i += 1;
+				i += 2;
+			} else if (json_str_eq(text, &tokens[i], "attributes") &&
+				(m[m_i].type == MODULE_SIMPLE))
+			{
+				if ((m[m_i].attributes != NULL) ||
+					(tokens[i + 1].type != JSMN_STRING))
+				{
+					return bad_token(i + 1, &tokens[i + 1],
+						text, state, e_text, e_size);
+				}
+				if (json_str_cpy(text, &tokens[i + 1],
+					&m[m_i].attributes))
 				{
 					return return_error(e_text, e_size, TOP_E_ALLOC, "");
 				}

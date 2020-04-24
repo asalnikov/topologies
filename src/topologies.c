@@ -656,6 +656,11 @@ expand_module (graph_t *g, module_t *module, network_definition_t *net,
 			free(name_s);
 			return return_error(e_text, e_size, TOP_E_ALLOC, "");
 		}
+		char *node_attrs = malloc(strlen(module->attributes) + 1);
+		if (!node_attrs)
+			return return_error(e_text, e_size, TOP_E_ALLOC, "");
+		strncpy(node_attrs, module->attributes, strlen(module->attributes) + 1);
+		g->nodes[graph_find_node(g, name_s)].attributes = node_attrs;
 		for (int i = 0; i < module->n_gates; i++) {
 			double size_d;
 			if ((res = param_stack_eval(p, module->gates[i].size,
@@ -980,6 +985,7 @@ topologies_network_destroy (void *v)
 				}
 				free(n->modules[i].params);
 			}
+			free(n->modules[i].attributes);
 			if (n->modules[i].submodules) {
 				for (int j = 0; j < n->modules[i].n_submodules; j++) {
 					free_submodule(&n->modules[i].submodules[j]);

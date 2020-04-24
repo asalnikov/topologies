@@ -1,6 +1,7 @@
 [
 { "simplemodule": {
 	"name": "simple",
+	"attributes": "shape=box",
 	"gates": [ { "gate": "k" } ]
 }},
 
