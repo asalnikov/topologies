@@ -497,8 +497,9 @@ parse_connection (int subobj_n, jsmntok_t *tokens, char *text,
 	}
 
 	*i += 1;
-	if ((subobj_n == 2) &&
-		((json_str_eq(text, &tokens[*i], "from")) ||
+	if (((subobj_n == 2) || (subobj_n == 3)) &&
+		((json_str_eq(text, &tokens[*i], "attributes")) ||
+		(json_str_eq(text, &tokens[*i], "from")) ||
 		(json_str_eq(text, &tokens[*i], "to"))))
 	{
 		connection->type = CONN_HAS_CONN;
@@ -520,6 +521,15 @@ parse_connection (int subobj_n, jsmntok_t *tokens, char *text,
 					return bad_token(*i, &tokens[*i], text, state, e_text, e_size);
 				if (json_str_cpy(text, &tokens[*i + 1],
 					&connection->ptr.conn->to))
+				{
+					return return_error(e_text, e_size, TOP_E_ALLOC, "");
+				}
+				*i += 2;
+			} else if (json_str_eq(text, &tokens[*i], "attributes")) {
+				if (connection->ptr.conn->attributes != NULL)
+					return bad_token(*i, &tokens[*i], text, state, e_text, e_size);
+				if (json_str_cpy(text, &tokens[*i + 1],
+					&connection->ptr.conn->attributes))
 				{
 					return return_error(e_text, e_size, TOP_E_ALLOC, "");
 				}

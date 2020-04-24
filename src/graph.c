@@ -34,6 +34,8 @@ graph_add_node (graph_t *g, char *name, node_type type)
 			g->cap_nodes * sizeof(node_t));
 		if (!g->nodes)
 			return TOP_E_ALLOC;
+		memset(g->nodes + (g->cap_nodes - GRAPH_BLK_SIZE), 0,
+			GRAPH_BLK_SIZE * sizeof(node_t));
 	}
 	g->nodes[i].name = (char *) malloc(strlen(name) + 1);
 	if (!g->nodes[i].name)
@@ -61,7 +63,7 @@ graph_find_node (graph_t *g, char *name)
 }
 
 int
-graph_add_edge_id (graph_t *g, int n_a, int n_b)
+graph_add_edge_id (graph_t *g, int n_a, int n_b, char *attrs)
 {
 	if ((n_a < 0) || (n_b < 0) || (n_a > g->n_nodes) || (n_b > g->n_nodes))
 		return TOP_E_CONN;
@@ -80,6 +82,12 @@ graph_add_edge_id (graph_t *g, int n_a, int n_b)
 	}
 	node_a->adj[i].n = node_b->n;
 	node_a->adj[i].attributes = NULL;
+	if (attrs) {
+		node_a->adj[i].attributes = (char *) malloc(strlen(attrs) + 1);
+		if (!node_a->adj[i].attributes)
+			return TOP_E_ALLOC;
+		strncpy(node_a->adj[i].attributes, attrs, strlen(attrs) + 1);
+	}
 	node_a->n_adj++;
 
 	i = node_b->n_adj;
@@ -93,7 +101,13 @@ graph_add_edge_id (graph_t *g, int n_a, int n_b)
 			ADJ_BLK_SIZE * sizeof(edge_t));
 	}
 	node_b->adj[i].n = node_a->n;
-	node_a->adj[i].attributes = NULL;
+	node_b->adj[i].attributes = NULL;
+	if (attrs) {
+		node_b->adj[i].attributes = (char *) malloc(strlen(attrs) + 1);
+		if (!node_b->adj[i].attributes)
+			return TOP_E_ALLOC;
+		strncpy(node_b->adj[i].attributes, attrs, strlen(attrs) + 1);
+	}
 	node_b->n_adj++;
 
 	return 0;
@@ -111,7 +125,7 @@ graph_are_adjacent (node_t *node_a, node_t *node_b)
 }
 
 int
-graph_add_edge_name (graph_t *g, char *name_a, char *name_b)
+graph_add_edge_name (graph_t *g, char *name_a, char *name_b, char *attrs)
 {
 	int node_a, node_b;
 	node_a = graph_find_node(g, name_a);
@@ -120,7 +134,7 @@ graph_add_edge_name (graph_t *g, char *name_a, char *name_b)
 		return TOP_E_CONN;
 	if (node_b < 0)
 		return TOP_E_CONN;
-	return graph_add_edge_id(g, node_a, node_b);
+	return graph_add_edge_id(g, node_a, node_b, attrs);
 }
 
 void
