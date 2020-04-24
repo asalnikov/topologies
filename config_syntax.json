@@ -51,7 +51,8 @@
 	},
 	{
 		"from": "simplevec[0]",
-		"to": "simplevec[3]"
+		"to": "simplevec[3]",
+		"attributes": "style=dotted"
 	},
 	{
 		"from": "simplevec[0]",

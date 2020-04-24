@@ -847,12 +847,12 @@ graph_find_end_and_mark (graph_t *g, int prev, int n, int *n_node_res,
 				break;
 			} else if (g->nodes[node_tmp->adj[1].n].type == NODE_GATE) {
 				if (node_tmp->adj[1].attributes)
-					*attributes = node_tmp->adj[0].attributes;
+					*attributes = node_tmp->adj[1].attributes;
 				node_tmp->type = NODE_GATE_VISITED;
 				node_tmp = &(g->nodes[node_tmp->adj[1].n]);
 			} else {
 				if (node_tmp->adj[1].attributes)
-					*attributes = node_tmp->adj[0].attributes;
+					*attributes = node_tmp->adj[1].attributes;
 				node_tmp->type = NODE_GATE_VISITED;
 				node_tmp = &(g->nodes[node_tmp->adj[1].n]);
 				break;
@@ -972,6 +972,7 @@ free_connection (connection_wrapper_t *c)
 	if (c->type == CONN_HAS_CONN) {
 		free(c->ptr.conn->from);
 		free(c->ptr.conn->to);
+		free(c->ptr.conn->attributes);
 		free(c->ptr.conn);
 	} else if (c->type == CONN_HAS_COND) {
 		free_connection(c->ptr.cond->conn_then);
