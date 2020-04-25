@@ -1,0 +1,52 @@
+[
+{ "simplemodule": {
+	"name": "tensor_simple"
+}},
+
+{ "module": {
+	"name": "chain",
+	"submodules": [
+		{
+			"name": "v",
+			"module": "tensor_simple",
+			"size": "len"
+		}
+	],
+	"connections": [
+		{
+			"loop": "i",
+			"start": "0",
+			"end": "len - 1",
+			"conn": {
+				"from": "v[i]",
+				"to": "v[i + 1]"
+			}
+		}
+	]
+}},
+
+{ "module": {
+	"name": "prod",
+	"submodules": [ {
+		"rooted": [
+			{
+				"name": "a",
+				"module": "chain",
+				"params": [ { "len": "5" } ]
+			},
+			{
+				"name": "b",
+				"module": "chain",
+				"params": [ { "len": "3" } ]
+			}
+		],
+		"root": "b.v[0]"
+		}
+	]
+}},
+
+
+{ "network": { 
+	"module": "prod"
+}}
+]

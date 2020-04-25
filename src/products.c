@@ -494,3 +494,96 @@ graphs_strong_product (graph_t *g_a, graph_t *g_b, graph_t *g_prod,
 	free(name_buf_neigh);
 	return 0;
 }
+
+int
+graphs_root_product (graph_t *g_a, graph_t *g_b, graph_t *g_prod,
+	char *root_name, char *e_text, size_t e_size)
+{
+	int res;
+	int name_buf_blk = 32;
+	int name_buf_cap = name_buf_blk;
+	int name_buf_neigh_cap = name_buf_blk;
+
+	graphs_cart_product_nodes(g_a, g_b, g_prod, &name_buf_cap,
+		&name_buf_neigh_cap, e_text, e_size);
+
+	char *name_buf = malloc(name_buf_cap);
+	if (!name_buf)
+		return return_error(e_text, e_size, TOP_E_ALLOC, "");
+	if (name_buf_neigh_cap < name_buf_cap)
+		name_buf_neigh_cap = name_buf_cap;
+	char *name_buf_neigh = malloc(name_buf_neigh_cap);
+	if (!name_buf_neigh)
+		return return_error(e_text, e_size, TOP_E_ALLOC, "");
+
+	int root = graph_find_node(g_b, root_name);
+	if ((root < 0) ||
+		(g_b->nodes[root].type != NODE_NODE))
+	{
+		return return_error(e_text, e_size, TOP_E_ROOT, " %s", root_name);
+	}
+
+	for (int i = 0; i < g_a->n_nodes; i++) {
+		if (g_a->nodes[i].type != NODE_NODE) continue;
+
+		sprintf(name_buf, "(%s,%s)", g_a->nodes[i].name,
+			g_b->nodes[root].name);
+
+		for (int k = 0; k < g_a->nodes[i].n_adj; k++) {
+			if (g_a->nodes[g_a->nodes[i].adj[k].n].type != NODE_NODE) continue;
+
+			sprintf(name_buf_neigh, "(%s,%s)",
+				g_a->nodes[g_a->nodes[i].adj[k].n].name,
+				g_b->nodes[root].name);
+
+			if ((res = graph_add_edge_name(g_prod, name_buf,
+				name_buf_neigh,
+				g_a->nodes[i].adj[k].attributes)))
+			{
+				if (res == TOP_E_CONN) {
+					return_error(e_text, e_size, TOP_E_CONN,
+						" %s %s", name_buf, name_buf_neigh);
+					return TOP_E_CONN;
+				} else {
+					return return_error(e_text, e_size, res, "");
+				}
+			}
+		}
+	}
+
+	for (int i = 0; i < g_a->n_nodes; i++) {
+		if (g_a->nodes[i].type != NODE_NODE) continue;
+
+		for (int j = 0; j < g_b->n_nodes; j++) {
+			if (g_b->nodes[j].type != NODE_NODE) continue;
+
+			sprintf(name_buf, "(%s,%s)", g_a->nodes[i].name,
+				g_b->nodes[j].name);
+
+			for (int k = 0; k < g_b->nodes[j].n_adj; k++) {
+				if (g_b->nodes[g_b->nodes[j].adj[k].n].type != NODE_NODE) continue;
+
+				sprintf(name_buf_neigh, "(%s,%s)",
+					g_a->nodes[i].name,
+					g_b->nodes[g_b->nodes[j].adj[k].n].name);
+
+				if ((res = graph_add_edge_name(g_prod, name_buf,
+					name_buf_neigh,
+					g_b->nodes[j].adj[k].attributes)))
+				{
+					if (res == TOP_E_CONN) {
+						return_error(e_text, e_size, TOP_E_CONN,
+							" %s %s", name_buf, name_buf_neigh);
+						return TOP_E_CONN;
+					} else {
+						return return_error(e_text, e_size, res, "");
+					}
+				}
+			}
+		}
+	}
+
+	free(name_buf);
+	free(name_buf_neigh);
+	return 0;
+}

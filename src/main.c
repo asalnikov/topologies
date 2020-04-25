@@ -8,7 +8,6 @@
 
 /* TODO
  * comments!
- * tensor product, corona product, rooted product, lexicographic product
  */
 
 /* TinyExpr supports addition (+), subtraction/negation (-), multiplication (*),

@@ -311,7 +311,11 @@ parse_submodule (int subobj_n, jsmntok_t *tokens, char *text,
 	int subres;
 	/* at the start, i points at the outermost object */
 	int state = STATE_MODULE_SUBMODULE;
-	if (subobj_n == 1) {
+	if ((subobj_n == 1) || ((subobj_n == 2) &&
+		(json_str_eq(text, &tokens[*i + 1], "rooted") ||
+		json_str_eq(text, &tokens[*i + 1], "root"))))
+	{
+		int subobj_i = 0;
 		*i += 1;
 		submodule->type = SUBM_HAS_PROD;
 		submodule->ptr.prod = calloc(1, sizeof(submodule_prod_t));
@@ -326,9 +330,31 @@ parse_submodule (int subobj_n, jsmntok_t *tokens, char *text,
 			submodule->ptr.prod->type = PROD_IS_LEX;
 		} else if (json_str_eq(text, &tokens[*i], "strong")) {
 			submodule->ptr.prod->type = PROD_IS_STRONG;
+		} else if (json_str_eq(text, &tokens[*i], "root")) {
+			submodule->ptr.prod->type = PROD_IS_ROOT;
+		} else if (json_str_eq(text, &tokens[*i], "rooted")) {
+			submodule->ptr.prod->type = PROD_IS_ROOT;
 		} else {
 			return bad_token(*i, &tokens[*i], text, state, e_text, e_size);
 		}
+		if (json_str_eq(text, &tokens[*i], "root")) {
+			if (tokens[*i + 1].type != JSMN_STRING) {
+				return bad_token(*i + 1, &tokens[*i + 1], text,
+					state, e_text, e_size);
+			}
+			if (json_str_cpy(text, &tokens[*i + 1],
+				&submodule->ptr.prod->root))
+			{
+				return return_error(e_text, e_size, TOP_E_ALLOC, "");
+			}
+			*i += 2;
+			if (!json_str_eq(text, &tokens[*i], "rooted")) {
+				return bad_token(*i, &tokens[*i], text,
+					state, e_text, e_size);
+			}
+			subobj_i++;
+		}
+
 		*i += 1;
 		if ((tokens[*i].type != JSMN_ARRAY) ||
 			(tokens[*i].size != 2))
@@ -363,6 +389,23 @@ parse_submodule (int subobj_n, jsmntok_t *tokens, char *text,
 		{
 			return subres;
 		}
+		if ((submodule->ptr.prod->type == PROD_IS_ROOT) &&
+			(subobj_i == 0))
+		{
+			if ((!json_str_eq(text, &tokens[*i], "root"))
+				|| (tokens[*i + 1].type != JSMN_STRING))
+			{
+				return bad_token(*i, &tokens[*i], text,
+					state, e_text, e_size);
+			}
+			if (json_str_cpy(text, &tokens[*i + 1],
+				&submodule->ptr.prod->root))
+			{
+				return return_error(e_text, e_size, TOP_E_ALLOC, "");
+			}
+			*i += 2;
+		}
+
 	} else if (((subobj_n == 2) || (subobj_n == 3)) &&
 		((json_str_eq(text, &tokens[*i + 1], "if")) ||
 		(json_str_eq(text, &tokens[*i + 1], "then")) ||
