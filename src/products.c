@@ -301,7 +301,6 @@ graphs_lex_product (graph_t *g_a, graph_t *g_b, graph_t *g_prod,
 	char *e_text, size_t e_size)
 {
 	int res;
-	int name_len;
 	int name_buf_blk = 32;
 	int name_buf_cap = name_buf_blk;
 	int name_buf_neigh_cap = name_buf_blk;
@@ -312,6 +311,8 @@ graphs_lex_product (graph_t *g_a, graph_t *g_b, graph_t *g_prod,
 	char *name_buf = malloc(name_buf_cap);
 	if (!name_buf)
 		return return_error(e_text, e_size, TOP_E_ALLOC, "");
+	if (name_buf_neigh_cap < name_buf_cap)
+		name_buf_neigh_cap = name_buf_cap;
 	char *name_buf_neigh = malloc(name_buf_neigh_cap);
 	if (!name_buf_neigh)
 		return return_error(e_text, e_size, TOP_E_ALLOC, "");
@@ -325,58 +326,33 @@ graphs_lex_product (graph_t *g_a, graph_t *g_b, graph_t *g_prod,
 				g_b->nodes[j].name);
 
 			for (int k = 0; k < g_a->nodes[i].n_adj; k++) {
-				if (g_a->nodes[g_a->nodes[i].adj[k].n].type != NODE_NODE)
-					continue;
-				if (g_a->nodes[i].adj[k].n < i) continue;
+				if (g_a->nodes[g_a->nodes[i].adj[k].n].type != NODE_NODE) continue;
 
-				name_len =
-					strlen(g_a->nodes[g_a->nodes[i].adj[k].n].name) +
-					strlen(g_b->nodes[j].name) + 4;
-				if (name_buf_neigh_cap < name_len) {
-					name_buf_neigh_cap = (1 + name_len / name_buf_blk) *
-						name_buf_blk;
-					name_buf_neigh = realloc(name_buf_neigh,
-						name_buf_neigh_cap);
-					if (!name_buf_neigh) {
-						return return_error(e_text, e_size,
-							TOP_E_ALLOC, "");
-					}
-				}
-				sprintf(name_buf_neigh, "(%s,%s)",
-					g_a->nodes[g_a->nodes[i].adj[k].n].name,
-					g_b->nodes[j].name);
+				for (int l = 0; l < g_b->n_nodes; l++) {
+					if (g_b->nodes[g_b->nodes[j].adj[k].n].type != NODE_NODE) continue;
 
-				if ((res = graph_add_edge_name(g_prod, name_buf,
-					name_buf_neigh,
-					g_a->nodes[i].adj[k].attributes)))
-				{
-					if (res == TOP_E_CONN) {
-						return_error(e_text, e_size, TOP_E_CONN,
-							" %s %s", name_buf, name_buf_neigh);
-						return TOP_E_CONN;
-					} else {
-						return return_error(e_text, e_size, res, "");
+					sprintf(name_buf_neigh, "(%s,%s)",
+						g_a->nodes[g_a->nodes[i].adj[k].n].name,
+						g_b->nodes[l].name);
+
+					if ((res = graph_add_edge_name(g_prod, name_buf,
+						name_buf_neigh,
+						g_b->nodes[j].adj[k].attributes)))
+					{
+						if (res == TOP_E_CONN) {
+							return_error(e_text, e_size, TOP_E_CONN,
+								" %s %s", name_buf, name_buf_neigh);
+							return TOP_E_CONN;
+						} else {
+							return return_error(e_text, e_size, res, "");
+						}
 					}
 				}
 			}
 
 			for (int k = 0; k < g_b->nodes[j].n_adj; k++) {
-				if (g_b->nodes[g_b->nodes[j].adj[k].n].type != NODE_NODE)
-					continue;
-				if (g_b->nodes[j].adj[k].n < j) continue;
+				if (g_b->nodes[g_b->nodes[j].adj[k].n].type != NODE_NODE) continue;
 
-				name_len = strlen(g_a->nodes[i].name) +
-					strlen(g_b->nodes[g_b->nodes[j].adj[k].n].name) + 4;
-				if (name_buf_neigh_cap < name_len) {
-					name_buf_neigh_cap = (1 + name_len / name_buf_blk) *
-						name_buf_blk;
-					name_buf_neigh = realloc(name_buf_neigh,
-						name_buf_neigh_cap);
-					if (!name_buf_neigh) {
-						return return_error(e_text, e_size,
-							TOP_E_ALLOC, "");
-					}
-				}
 				sprintf(name_buf_neigh, "(%s,%s)",
 					g_a->nodes[i].name,
 					g_b->nodes[g_b->nodes[j].adj[k].n].name);
