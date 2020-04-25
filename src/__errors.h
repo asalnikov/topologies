@@ -13,5 +13,6 @@ E(TOP_E_ALLOC, "Could not allocate memory")
 E(TOP_E_JSON, "Invalid JSON")
 E(TOP_E_TOKEN, "Bad token")
 E(TOP_E_LOOP, "Bad loop boundaries")
+E(TOP_E_REGEX, "Bad regex")
 
 E(0, "No error information")

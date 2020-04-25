@@ -1,0 +1,34 @@
+[
+{ "simplemodule": {
+	"name": "alltoall_simple"
+}},
+
+{ "module": {
+	"name": "alltoall",
+	"submodules": [ {
+		"name": "node",
+		"module": "alltoall_simple",
+		"size": "3"
+	}],
+	"connections": [
+	{
+		"loop": "i",
+		"start": "0",
+		"end": "3",
+		"conn": {
+			"loop": "j",
+			"start": "0",
+			"end": "i",
+			"conn": {
+				"from": "node[i]",
+				"to": "node[j]"
+			}
+		}
+	}]
+}},
+
+
+{ "network": {
+	"module": "alltoall"
+}}
+]

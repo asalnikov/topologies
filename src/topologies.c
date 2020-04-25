@@ -7,6 +7,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <math.h>
+#include <regex.h>
 #include <limits.h>
 #include <sys/stat.h>
 #include <sys/mman.h>
@@ -272,7 +273,7 @@ traverse_and_add_conns (connection_wrapper_t *c, graph_t *g,
 }
 
 static int
-graphs_product (graph_t *g_a, graph_t *g_b, graph_t *g_prod,
+graphs_cart_product (graph_t *g_a, graph_t *g_b, graph_t *g_prod,
 	char *e_text, size_t e_size)
 {
 	int res;
@@ -590,7 +591,7 @@ add_submodule (submodule_wrapper_t *smodule,
 			topologies_graph_destroy(g_b);
 			return return_error(e_text, e_size, TOP_E_ALLOC, "");
 		}
-		if ((res = graphs_product(g_a, g_b, g_prod, e_text, e_size))) {
+		if ((res = graphs_cart_product(g_a, g_b, g_prod, e_text, e_size))) {
 			return res;
 		}
 		topologies_graph_destroy(g_a);
@@ -674,6 +675,73 @@ add_submodule (submodule_wrapper_t *smodule,
 }
 
 static int
+do_replace (replace_t *replace,
+	network_definition_t *net, graph_t *g,
+	name_stack_t *s, param_stack_t *p,
+	char *e_text, size_t e_size)
+{
+	regex_t regex;
+	int res;
+
+	if (regcomp(&regex, replace->nodes, 0)) {
+		return return_error(e_text, e_size, TOP_E_REGEX, replace->nodes);
+	}
+
+	for (int i = 0; i < g->n_nodes; i++) {
+		if (!regexec(&regex, g->nodes[i].name, 0, NULL, 0)) {
+			g->nodes[i].type = NODE_REPLACED_T;
+		}
+	}
+	regfree(&regex);
+	if ((res = add_submodule(replace->submodule, net, g, s, p, e_text, e_size)))
+		return res;
+
+	for (int i = 0; i < g->n_nodes; i++) {
+		if (g->nodes[i].type == NODE_REPLACED_T) {
+			int node = graph_find_node(g, g->nodes[i].name);
+			if (node < 0) {
+				g->nodes[i].type = NODE_REPLACED;
+				continue;
+			}
+			for (int j = 0; j < g->nodes[i].n_adj; j++) {
+				int k;
+				for (k = 0; k < g->nodes[g->nodes[i].adj[j].n].n_adj; k++) {
+					if (g->nodes[g->nodes[i].adj[j].n].adj[k].n == i) {
+						g->nodes[g->nodes[i].adj[j].n].adj[k].n = node;
+						break;
+					}
+				}
+				bool seen = false;
+				for (int l = 0; l < g->nodes[node].n_adj; l++) {
+					if (g->nodes[node].adj[l].n == g->nodes[i].adj[j].n)
+						seen = true;
+				}
+				if (!seen) {
+					node_t *node_a = &(g->nodes[node]);
+					int ii = node_a->n_adj;
+					if (node_a->n_adj == node_a->cap_adj) {
+						node_a->cap_adj += ADJ_BLK_SIZE;
+						node_a->adj = (edge_t *) realloc(node_a->adj,
+							node_a->cap_adj * sizeof(edge_t));
+						if (!node_a->adj)
+							return TOP_E_ALLOC;
+						memset(node_a->adj + (node_a->cap_adj - ADJ_BLK_SIZE), 0,
+							ADJ_BLK_SIZE * sizeof(edge_t));
+					}
+					node_a->adj[ii].n = g->nodes[i].adj[j].n;
+					node_a->adj[ii].attributes = g->nodes[i].adj[j].attributes;
+					node_a->n_adj++;
+				}
+			}
+			g->nodes[i].type = NODE_REPLACED;
+			memset(g->nodes[i].name, 0, strlen(g->nodes[i].name));
+			g->nodes[i].n_adj = 0;
+		}
+	}
+	return 0;
+}
+
+static int
 expand_module (graph_t *g, module_t *module, network_definition_t *net,
 	name_stack_t *s, param_stack_t *p, char *e_text, size_t e_size)
 {
@@ -720,7 +788,7 @@ expand_module (graph_t *g, module_t *module, network_definition_t *net,
 		}
 		free(name_s);
 	} else {
-		/* add gates, add submodules, add connections */
+		/* add gates, add submodules, add connections, do replacements */
 		for (int i = 0; i < module->n_gates; i++) {
 			double size_d;
 			if ((res = param_stack_eval(p, module->gates[i].size,
@@ -760,6 +828,13 @@ expand_module (graph_t *g, module_t *module, network_definition_t *net,
 		for (int i = 0; i < module->n_connections; i++) {
 			if ((res = traverse_and_add_conns(&module->connections[i],
 				g, p, s, e_text, e_size)))
+			{
+				return res;
+			}
+		}
+		for (int i = 0; i < module->n_replace; i++) {
+			if ((res = do_replace(&module->replace[i], net,
+				g, s, p, e_text, e_size)))
 			{
 				return res;
 			}
@@ -1029,6 +1104,14 @@ topologies_network_destroy (void *v)
 				free(n->modules[i].params);
 			}
 			free(n->modules[i].attributes);
+			if (n->modules[i].n_replace) {
+				for (int j = 0; j < n->modules[i].n_replace; j++) {
+					free(n->modules[i].replace[j].nodes);
+					free_submodule(n->modules[i].replace[j].submodule);
+					free(n->modules[i].replace[j].submodule);
+				}
+				free(n->modules[i].replace);
+			}
 			if (n->modules[i].submodules) {
 				for (int j = 0; j < n->modules[i].n_submodules; j++) {
 					free_submodule(&n->modules[i].submodules[j]);

@@ -21,6 +21,8 @@ typedef enum {
 	STATE_MODULE_CONNECTION,
 	STATE_MODULE_GATES_BETWEEN,
 	STATE_MODULE_GATE,
+	STATE_MODULE_REPLACE,
+	STATE_MODULE_REPLACE_BETWEEN,
 	STATE_NETWORK,
 	STATE_NETWORK_PARAMS
 } state_t;
@@ -179,6 +181,12 @@ state_name (state_t state)
 		break;
 	case STATE_MODULE_CONNECTION:
 		state_name = "STATE_MODULE_CONNECTION";
+		break;
+	case STATE_MODULE_REPLACE_BETWEEN:
+		state_name = "STATE_MODULE_REPLACE_BETWEEN";
+		break;
+	case STATE_MODULE_REPLACE:
+		state_name = "STATE_MODULE_REPLACE";
 		break;
 	case STATE_MODULE_GATES_BETWEEN:
 		state_name = "STATE_MODULE_GATES_BETWEEN";
@@ -480,6 +488,51 @@ parse_submodule (int subobj_n, jsmntok_t *tokens, char *text,
 		}
 	}
 	
+	return 0;
+}
+
+static int
+parse_replace (int subobj_n, jsmntok_t *tokens, char *text,
+	replace_t *replace, int *i,
+	char *e_text, size_t e_size)
+{
+	int subres;
+	/* at the start, i points at the outermost object */
+	int state = STATE_MODULE_REPLACE;
+	if (subobj_n != 2) {
+		return bad_token(*i, &tokens[*i], text, state, e_text, e_size);
+	}
+	*i += 1;
+	for (int subobj_i = 0; subobj_i < subobj_n; subobj_i++) {
+		if (json_str_eq(text, &tokens[*i], "nodes")) {
+			if (replace->nodes != NULL)
+				return bad_token(*i, &tokens[*i], text, state, e_text, e_size);
+			if (json_str_cpy(text, &tokens[*i + 1],
+				&replace->nodes))
+			{
+				return return_error(e_text, e_size, TOP_E_ALLOC, "");
+			}
+			*i += 2;
+		} else if (json_str_eq(text, &tokens[*i], "with")) {
+			*i += 1;
+			if ((tokens[*i].type != JSMN_OBJECT) ||
+				(replace->submodule != NULL))
+			{
+				return bad_token(*i, &tokens[*i], text,
+					state, e_text, e_size);
+			}
+			replace->submodule = calloc(1, sizeof(submodule_wrapper_t));
+			if (!replace->submodule)
+				return return_error(e_text, e_size, TOP_E_ALLOC, "");
+			if ((subres = parse_submodule(tokens[*i].size, tokens, text,
+				replace->submodule, i, e_text, e_size)) != 0)
+			{
+				return subres;
+			}
+		} else {
+			return bad_token(*i, &tokens[*i], text, state, e_text, e_size);
+		}
+	}
 	return 0;
 }
 
@@ -795,6 +848,24 @@ json_deserialize (jsmntok_t *tokens, int n_tokens, char *text,
 				m[m_i].n_submodules = arr_n;
 				i += 1;
 				state = STATE_MODULE_SUBMODULES_BETWEEN;
+			} else if (json_str_eq(text, &tokens[i], "replace")) {
+				obj_i += 1;
+				i += 1;
+				if (tokens[i].type != JSMN_ARRAY)
+					return bad_token(i, &tokens[i], text, state, e_text, e_size);
+				arr_n = tokens[i].size;
+				arr_i = 0;
+				if (m[m_i].replace != NULL)
+					return bad_token(i, &tokens[i], text, state, e_text, e_size);
+				if (arr_n > 0) {
+					m[m_i].replace =
+						calloc(arr_n, sizeof(replace_t));
+					if (!m[m_i].replace)
+						return return_error(e_text, e_size, TOP_E_ALLOC, "");
+				}
+				m[m_i].n_replace = arr_n;
+				i += 1;
+				state = STATE_MODULE_REPLACE_BETWEEN;
 			} else if (json_str_eq(text, &tokens[i], "connections")) {
 				obj_i += 1;
 				i += 1;
@@ -900,6 +971,15 @@ json_deserialize (jsmntok_t *tokens, int n_tokens, char *text,
 				state = STATE_MODULE_SUBMODULE;
 			}
 
+		} else if (state == STATE_MODULE_REPLACE_BETWEEN) {
+			if (arr_i == arr_n) {
+				state = STATE_MODULE;
+			} else if (tokens[i].type != JSMN_OBJECT) {
+				return bad_token(i, &tokens[i], text, state, e_text, e_size);
+			} else {
+				state = STATE_MODULE_REPLACE;
+			}
+
 		} else if (state == STATE_MODULE_CONNECTION) {
 			subobj_i = 0;
 			subobj_n = tokens[i].size;
@@ -922,6 +1002,18 @@ json_deserialize (jsmntok_t *tokens, int n_tokens, char *text,
 				return subres;
 			}
 			state = STATE_MODULE_SUBMODULES_BETWEEN;
+			arr_i += 1;
+
+		} else if (state == STATE_MODULE_REPLACE) {
+			subobj_i = 0;
+			subobj_n = tokens[i].size;
+			if ((subres = parse_replace(subobj_n, tokens, text,
+				&m[m_i].replace[arr_i], &i, e_text,
+				e_size)) != 0)
+			{
+				return subres;
+			}
+			state = STATE_MODULE_REPLACE_BETWEEN;
 			arr_i += 1;
 
 		} else if (state == STATE_MODULE_GATE) {

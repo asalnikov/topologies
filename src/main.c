@@ -10,13 +10,7 @@
  * comments!
  * tensor product, corona product, rooted product, lexicographic product
  * exceptions
- * "index" variable for its index in the vector
  * library for common stuff
- *
- * pass submodule's module as a param => text variables ?
- *
- * compact network form - in the end
- * exceptions / irregularities - in the end
  */
 
 /* TinyExpr supports addition (+), subtraction/negation (-), multiplication (*),

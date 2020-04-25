@@ -1,0 +1,92 @@
+[
+{ "simplemodule": {
+	"name": "gft_simple",
+	"gates": [ { "g": "ng" } ]
+}},
+
+{ "module": {
+	"name": "gft_layer",
+	"submodules": [
+	{
+		"name": "node",
+		"module": "gft_simple",
+		"size": "w^h",
+		"params": [{"ng":"0"}]
+	},
+	{
+		"if": "h > 0",
+		"then": {
+			"name": "prev",
+			"module": "gft_layer",
+			"size": "m",
+			"params": [ { "h": "h-1" } ]
+		}
+	}],
+	"connections": [
+	{
+		"if": "h > 0",
+		"then": {
+			"loop": "i",
+			"start": "0",
+			"end": "w^h",
+			"conn": {
+				"loop": "j",
+				"start": "0",
+				"end": "m",
+				"conn": {
+					"from": "prev[j].node[floor(i/w)]",
+					"to": "node[i]"
+				}
+			}
+		}
+	}
+	]
+}},
+
+{ "module": {
+	"name": "gft_alltoall",
+	"submodules": [ {
+		"name": "node",
+		"module": "gft_simple",
+		"size": "3",
+		"params":[{"ng":"2"}]
+	}],
+	"connections": [
+	{
+		"from": "node[1].g[0]",
+		"to": "node[0].g[0]"
+	},
+	{
+		"from": "node[2].g[0]",
+		"to": "node[0].g[1]"
+	},
+	{
+		"from": "node[2].g[1]",
+		"to": "node[1].g[1]"
+	}
+	]
+}},
+
+{ "module": {
+	"name": "gft_m",
+	"submodules": [
+	{
+		"name": "gft",
+		"module": "gft_layer",
+		"params": [ { "h": "2" }, { "m": "2" }, { "w": "3" } ]
+	}],
+	"replace": [
+	{
+		"nodes": "network.gft.node\\[[0-2]\\]$",
+		"with": {
+			"name": "gft",
+			"module": "gft_alltoall"
+		}
+	}
+	]
+}},
+
+{ "network": {
+	"module": "gft_m"
+}}
+]

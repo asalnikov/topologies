@@ -6,7 +6,9 @@
 typedef enum {
 	NODE_NODE,
 	NODE_GATE,
-	NODE_GATE_VISITED
+	NODE_GATE_VISITED,
+	NODE_REPLACED_T,
+	NODE_REPLACED
 } node_type;
 
 typedef struct {
@@ -147,6 +149,11 @@ typedef enum {
 } module_type_t;
 
 typedef struct {
+	char *nodes;
+	submodule_wrapper_t *submodule;
+} replace_t;
+
+typedef struct {
 	char *name;
 	raw_param_t *params;
 	int n_params;
@@ -158,6 +165,8 @@ typedef struct {
 	int n_connections;
 	module_type_t type;
 	char *attributes;
+	replace_t *replace;
+	int n_replace;
 } module_t;
 
 typedef struct {

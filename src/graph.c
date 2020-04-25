@@ -66,8 +66,10 @@ int
 graph_find_node (graph_t *g, char *name)
 {
 	for (int i = 0; i < g->n_nodes; i++)
-		if (strcmp(g->nodes[i].name, name) == 0)
-			return i;
+		if ((strcmp(g->nodes[i].name, name) == 0) &&
+			(g->nodes[i].type != NODE_REPLACED) &&
+			(g->nodes[i].type != NODE_REPLACED_T))
+				return i;
 	return -1;
 }
 

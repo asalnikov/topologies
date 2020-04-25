@@ -13,6 +13,7 @@
 #define TOP_E_JSON 10
 #define TOP_E_TOKEN 11
 #define TOP_E_LOOP 12
+#define TOP_E_REGEX 13
 
 int
 return_error (char *buf, size_t size, int e, const char *errmsg, ...);
