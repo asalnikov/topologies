@@ -545,15 +545,15 @@ parse_connection (int subobj_n, jsmntok_t *tokens, char *text,
 	int subres;
 	/* at the start, i points at the outermost object */
 	int state = STATE_MODULE_CONNECTION;
-	if ((subobj_n != 2) && (subobj_n != 3) && (subobj_n != 4)) {
+	if (subobj_n > 4) {
 		return bad_token(*i, &tokens[*i], text, state, e_text, e_size);
 	}
 
 	*i += 1;
 	if (((subobj_n == 2) || (subobj_n == 3)) &&
-		((json_str_eq(text, &tokens[*i], "attributes")) ||
-		(json_str_eq(text, &tokens[*i], "from")) ||
-		(json_str_eq(text, &tokens[*i], "to"))))
+		(json_str_eq(text, &tokens[*i], "attributes") ||
+		json_str_eq(text, &tokens[*i], "from") ||
+		json_str_eq(text, &tokens[*i], "to")))
 	{
 		connection->type = CONN_HAS_CONN;
 		connection->ptr.conn = calloc(1, sizeof(connection_plain_t));
@@ -591,7 +591,11 @@ parse_connection (int subobj_n, jsmntok_t *tokens, char *text,
 				return bad_token(*i, &tokens[*i], text, state, e_text, e_size);
 			}
 		}
-	} else if ((subobj_n == 2) || (subobj_n == 3)) {
+	} else if (((subobj_n == 2) || (subobj_n == 3)) &&
+		(json_str_eq(text, &tokens[*i], "if") ||
+		json_str_eq(text, &tokens[*i], "then") ||
+		json_str_eq(text, &tokens[*i], "else")))
+	{
 		connection->type = CONN_HAS_COND;
 		connection->ptr.cond = calloc(1, sizeof(connection_cond_t));
 		if (!connection->ptr.cond)
@@ -703,6 +707,37 @@ parse_connection (int subobj_n, jsmntok_t *tokens, char *text,
 					return subres;
 				}
 
+			} else {
+				return bad_token(*i, &tokens[*i], text, state, e_text, e_size);
+			}
+		}
+	} else if (((subobj_n == 1) || (subobj_n == 2)) &&
+		(json_str_eq(text, &tokens[*i], "attributes") ||
+		json_str_eq(text, &tokens[*i], "all"))) 
+	{
+		connection->type = CONN_HAS_ALL;
+		connection->ptr.all = calloc(1, sizeof(connection_all_t));
+		if (!connection->ptr.all)
+			return return_error(e_text, e_size, TOP_E_ALLOC, "");
+		for (int subobj_i = 0; subobj_i < subobj_n; subobj_i++) {
+			if (json_str_eq(text, &tokens[*i], "all")) {
+				if (connection->ptr.all->nodes != NULL)
+					return bad_token(*i, &tokens[*i], text, state, e_text, e_size);
+				if (json_str_cpy(text, &tokens[*i + 1],
+					&connection->ptr.all->nodes))
+				{
+					return return_error(e_text, e_size, TOP_E_ALLOC, "");
+				}
+				*i += 2;
+			} else if (json_str_eq(text, &tokens[*i], "attributes")) {
+				if (connection->ptr.all->attributes != NULL)
+					return bad_token(*i, &tokens[*i], text, state, e_text, e_size);
+				if (json_str_cpy(text, &tokens[*i + 1],
+					&connection->ptr.all->attributes))
+				{
+					return return_error(e_text, e_size, TOP_E_ALLOC, "");
+				}
+				*i += 2;
 			} else {
 				return bad_token(*i, &tokens[*i], text, state, e_text, e_size);
 			}

@@ -8,22 +8,16 @@
 	"submodules": [ {
 		"name": "node",
 		"module": "alltoall_simple",
-		"size": "3"
+		"size": "20"
 	}],
 	"connections": [
 	{
-		"loop": "i",
-		"start": "0",
-		"end": "3",
-		"conn": {
-			"loop": "j",
-			"start": "0",
-			"end": "i",
-			"conn": {
-				"from": "node[i]",
-				"to": "node[j]"
-			}
-		}
+		"all": "node\\[[0-9]\\]",
+		"attributes": "style=dotted"
+	},
+	{
+		"all": "node\\[[0-9]\\{2\\}\\]",
+		"attributes": "style=bold"
 	}]
 }},
 

@@ -9,8 +9,6 @@
 /* TODO
  * comments!
  * tensor product, corona product, rooted product, lexicographic product
- * exceptions
- * library for common stuff
  */
 
 /* TinyExpr supports addition (+), subtraction/negation (-), multiplication (*),
