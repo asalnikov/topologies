@@ -277,6 +277,139 @@ traverse_and_add_conns (connection_wrapper_t *c, graph_t *g,
 			}
 			param_stack_leave(p);
 		}
+	} else if (c->type == CONN_HAS_LINE) {
+		double tmp_d;
+		if ((res = param_stack_eval(p, c->ptr.line->start, &tmp_d,
+			e_text, e_size)))
+		{
+			return res;
+		}
+		int start = lrint(tmp_d);
+		if ((res = param_stack_eval(p, c->ptr.line->end, &tmp_d,
+			e_text, e_size)))
+		{
+			return res;
+		}
+		int end = lrint(tmp_d);
+		if (start > end) {
+			return return_error(e_text, e_size, TOP_E_LOOP,
+				"%d > %d\n", start, end);
+		}
+		char *n_name;
+		int res;
+		int *nodes_to_connect = malloc((end - start) * sizeof(int));
+		for (int j = start; j < end; j++) {
+			if (param_stack_enter_val(p, c->ptr.line->var, j))
+				return return_error(e_text, e_size, TOP_E_ALLOC, "");
+			if ((res = eval_conn_name(p, c->ptr.line->nodes, &n_name, e_text, e_size)))
+				return res;
+			char *full_name = get_full_name(s, n_name, -1);
+			nodes_to_connect[j - start] = graph_find_node(g, full_name);
+			if (nodes_to_connect[j - start] < 0)
+				return return_error(e_text, e_size, TOP_E_NODE, " %s", full_name);
+			free(n_name);
+			free(full_name);
+			param_stack_leave(p);
+		}
+		int n_node_a, n_node_b;
+		for (int i = 0; i < end - start - 1; i++) {
+			n_node_a = nodes_to_connect[i];
+			n_node_b = nodes_to_connect[i + 1];
+			if (add_auto_gate_full_name(g, &n_node_a,
+				g->nodes[nodes_to_connect[i]].name))
+			{
+				return return_error(e_text, e_size, TOP_E_ALLOC, "");
+			}
+			if (add_auto_gate_full_name(g, &n_node_b,
+				g->nodes[nodes_to_connect[i + 1]].name))
+			{
+				return return_error(e_text, e_size, TOP_E_ALLOC, "");
+			}
+			if (graph_add_edge_id(g, n_node_a, n_node_b,
+				c->ptr.line->attributes))
+			{
+				return return_error(e_text, e_size, TOP_E_CONN,
+					" %s %s", g->nodes[n_node_a].name,
+					g->nodes[n_node_b].name);
+			}
+		}
+		free(nodes_to_connect);
+	} else if (c->type == CONN_HAS_RING) {
+		double tmp_d;
+		if ((res = param_stack_eval(p, c->ptr.ring->start, &tmp_d,
+			e_text, e_size)))
+		{
+			return res;
+		}
+		int start = lrint(tmp_d);
+		if ((res = param_stack_eval(p, c->ptr.ring->end, &tmp_d,
+			e_text, e_size)))
+		{
+			return res;
+		}
+		int end = lrint(tmp_d);
+		if (start > end) {
+			return return_error(e_text, e_size, TOP_E_LOOP,
+				"%d > %d\n", start, end);
+		}
+		char *n_name;
+		int res;
+		int *nodes_to_connect = malloc((end - start) * sizeof(int));
+		for (int j = start; j < end; j++) {
+			if (param_stack_enter_val(p, c->ptr.ring->var, j))
+				return return_error(e_text, e_size, TOP_E_ALLOC, "");
+			if ((res = eval_conn_name(p, c->ptr.ring->nodes, &n_name, e_text, e_size)))
+				return res;
+			char *full_name = get_full_name(s, n_name, -1);
+			nodes_to_connect[j - start] = graph_find_node(g, full_name);
+			if (nodes_to_connect[j - start] < 0)
+				return return_error(e_text, e_size, TOP_E_NODE, " %s", full_name);
+			free(n_name);
+			free(full_name);
+			param_stack_leave(p);
+		}
+		int n_node_a, n_node_b;
+		for (int i = 0; i < end - start - 1; i++) {
+			n_node_a = nodes_to_connect[i];
+			n_node_b = nodes_to_connect[i + 1];
+			if (add_auto_gate_full_name(g, &n_node_a,
+				g->nodes[nodes_to_connect[i]].name))
+			{
+				return return_error(e_text, e_size, TOP_E_ALLOC, "");
+			}
+			if (add_auto_gate_full_name(g, &n_node_b,
+				g->nodes[nodes_to_connect[i + 1]].name))
+			{
+				return return_error(e_text, e_size, TOP_E_ALLOC, "");
+			}
+			if (graph_add_edge_id(g, n_node_a, n_node_b,
+				c->ptr.ring->attributes))
+			{
+				return return_error(e_text, e_size, TOP_E_CONN,
+					" %s %s", g->nodes[n_node_a].name,
+					g->nodes[n_node_b].name);
+			}
+		}
+		n_node_a = nodes_to_connect[0];
+		n_node_b = nodes_to_connect[end - start - 1];
+		if (add_auto_gate_full_name(g, &n_node_a,
+			g->nodes[nodes_to_connect[0]].name))
+		{
+			return return_error(e_text, e_size, TOP_E_ALLOC, "");
+		}
+		if (add_auto_gate_full_name(g, &n_node_b,
+			g->nodes[nodes_to_connect[end - start - 1]].name))
+		{
+			return return_error(e_text, e_size, TOP_E_ALLOC, "");
+		}
+		if (graph_add_edge_id(g, n_node_a, n_node_b,
+			c->ptr.ring->attributes))
+		{
+			return return_error(e_text, e_size, TOP_E_CONN,
+				" %s %s", g->nodes[n_node_a].name,
+				g->nodes[n_node_b].name);
+		}
+		free(nodes_to_connect);
 	} else if (c->type == CONN_HAS_COND) {
 		double tmp_d;
 		if ((res = param_stack_eval(p, c->ptr.cond->condition, &tmp_d,
@@ -316,7 +449,7 @@ traverse_and_add_conns (connection_wrapper_t *c, graph_t *g,
 		if (!stack_name) return return_error(e_text, e_size, TOP_E_ALLOC, "");
 
 		for (int i = 0; i < g->n_nodes; i++) {
-			if (!regexec(&regex, g->nodes[i].name, 0, NULL, 0)) {
+			if (!regexec(&regex, g->nodes[i].name, 0, NULL, REG_EXTENDED)) {
 				if (strncmp(stack_name, g->nodes[i].name,
 					strlen(stack_name)) == 0)
 				{
@@ -598,7 +731,7 @@ do_replace (replace_t *replace,
 	if (!stack_name) return return_error(e_text, e_size, TOP_E_ALLOC, "");
 
 	for (int i = 0; i < g->n_nodes; i++) {
-		if (!regexec(&regex, g->nodes[i].name, 0, NULL, 0)) {
+		if (!regexec(&regex, g->nodes[i].name, 0, NULL, REG_EXTENDED)) {
 			if (strncmp(stack_name, g->nodes[i].name, strlen(stack_name)) == 0)
 				g->nodes[i].type = NODE_REPLACED_T;
 		}
@@ -991,6 +1124,20 @@ free_connection (connection_wrapper_t *c)
 		}
 		free(c->ptr.cond->condition);
 		free(c->ptr.cond);
+	} else if (c->type == CONN_HAS_LINE) {
+		free(c->ptr.line->var);
+		free(c->ptr.line->start);
+		free(c->ptr.line->end);
+		free(c->ptr.line->nodes);
+		free(c->ptr.line->attributes);
+		free(c->ptr.line);
+	} else if (c->type == CONN_HAS_RING) {
+		free(c->ptr.ring->var);
+		free(c->ptr.ring->start);
+		free(c->ptr.ring->end);
+		free(c->ptr.ring->nodes);
+		free(c->ptr.ring->attributes);
+		free(c->ptr.ring);
 	} else if (c->type == CONN_HAS_ALL) {
 		free(c->ptr.all->nodes);
 		free(c->ptr.all->attributes);

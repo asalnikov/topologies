@@ -596,7 +596,7 @@ parse_connection (int subobj_n, jsmntok_t *tokens, char *text,
 	int subres;
 	/* at the start, i points at the outermost object */
 	int state = STATE_MODULE_CONNECTION;
-	if (subobj_n > 4) {
+	if (subobj_n > 5) {
 		return bad_token(*i, &tokens[*i], text, state, e_text, e_size);
 	}
 
@@ -706,65 +706,188 @@ parse_connection (int subobj_n, jsmntok_t *tokens, char *text,
 				return bad_token(*i, &tokens[*i], text, state, e_text, e_size);
 			}
 		}
-	} else if (subobj_n == 4) {
+	} else if ((subobj_n == 4) || (subobj_n == 5)) {
 		connection->type = CONN_HAS_LOOP;
-		connection->ptr.loop = calloc(1, sizeof(connection_loop_t));
-		if (!connection->ptr.loop)
-			return return_error(e_text, e_size, TOP_E_ALLOC, "");
-		for (int subobj_i = 0; subobj_i < subobj_n; subobj_i++) {
-			if (json_str_eq(text, &tokens[*i], "start")) {
-				if (connection->ptr.loop->start != NULL)
-					return bad_token(*i, &tokens[*i], text, state, e_text, e_size);
-				if (json_str_cpy(text, &tokens[*i + 1],
-					&connection->ptr.loop->start))
-				{
-					return return_error(e_text, e_size, TOP_E_ALLOC, "");
-				}
-				*i += 2;
-			} else if (json_str_eq(text, &tokens[*i], "end")) {
-				if (connection->ptr.loop->end != NULL)
-					return bad_token(*i, &tokens[*i], text, state, e_text, e_size);
-				if (json_str_cpy(text, &tokens[*i + 1],
-					&connection->ptr.loop->end))
-				{
-					return return_error(e_text, e_size, TOP_E_ALLOC, "");
-				}
-				*i += 2;
-			} else if (json_str_eq(text, &tokens[*i], "loop")) {
-				if (connection->ptr.loop->loop != NULL)
-					return bad_token(*i, &tokens[*i], text, state, e_text, e_size);
-				if (json_str_cpy(text, &tokens[*i + 1],
-					&connection->ptr.loop->loop))
-				{
-					return return_error(e_text, e_size, TOP_E_ALLOC, "");
-				}
-				*i += 2;
-			} else if (json_str_eq(text, &tokens[*i], "conn")) {
-				*i += 1;
-				if ((tokens[*i].type != JSMN_OBJECT) ||
-					(connection->ptr.loop->conn != NULL))
-				{
-					return bad_token(*i, &tokens[*i], text, state, e_text, e_size);
-				}
-				connection->ptr.loop->conn =
-					calloc(1, sizeof(connection_wrapper_t));
-				if (!connection->ptr.loop->conn)
-					return return_error(e_text, e_size, TOP_E_ALLOC, "");
-				if ((subres = parse_connection(tokens[*i].size,
-					tokens, text,
-					connection->ptr.loop->conn, i,
-					e_text, e_size)) != 0)
-				{
-					return subres;
-				}
+		for (int t = 0; t < subobj_n; t++) {
+			if (tokens[*i + 1].type == JSMN_OBJECT)
+				break;
+			if (json_str_eq(text, &tokens[*i], "ring")) {
+				connection->type = CONN_HAS_RING;
+				break;
+			}
+			if (json_str_eq(text, &tokens[*i], "line")) {
+				connection->type = CONN_HAS_LINE;
+				break;
+			}
+		}
+		if (connection->type == CONN_HAS_LOOP) {
+			connection->ptr.loop = calloc(1, sizeof(connection_loop_t));
+			if (!connection->ptr.loop)
+				return return_error(e_text, e_size, TOP_E_ALLOC, "");
+			for (int subobj_i = 0; subobj_i < subobj_n; subobj_i++) {
+				if (json_str_eq(text, &tokens[*i], "start")) {
+					if (connection->ptr.loop->start != NULL)
+						return bad_token(*i, &tokens[*i], text, state, e_text, e_size);
+					if (json_str_cpy(text, &tokens[*i + 1],
+						&connection->ptr.loop->start))
+					{
+						return return_error(e_text, e_size, TOP_E_ALLOC, "");
+					}
+					*i += 2;
+				} else if (json_str_eq(text, &tokens[*i], "end")) {
+					if (connection->ptr.loop->end != NULL)
+						return bad_token(*i, &tokens[*i], text, state, e_text, e_size);
+					if (json_str_cpy(text, &tokens[*i + 1],
+						&connection->ptr.loop->end))
+					{
+						return return_error(e_text, e_size, TOP_E_ALLOC, "");
+					}
+					*i += 2;
+				} else if (json_str_eq(text, &tokens[*i], "loop")) {
+					if (connection->ptr.loop->loop != NULL)
+						return bad_token(*i, &tokens[*i], text, state, e_text, e_size);
+					if (json_str_cpy(text, &tokens[*i + 1],
+						&connection->ptr.loop->loop))
+					{
+						return return_error(e_text, e_size, TOP_E_ALLOC, "");
+					}
+					*i += 2;
+				} else if (json_str_eq(text, &tokens[*i], "conn")) {
+					*i += 1;
+					if ((tokens[*i].type != JSMN_OBJECT) ||
+						(connection->ptr.loop->conn != NULL))
+					{
+						return bad_token(*i, &tokens[*i], text, state, e_text, e_size);
+					}
+					connection->ptr.loop->conn =
+						calloc(1, sizeof(connection_wrapper_t));
+					if (!connection->ptr.loop->conn)
+						return return_error(e_text, e_size, TOP_E_ALLOC, "");
+					if ((subres = parse_connection(tokens[*i].size,
+						tokens, text,
+						connection->ptr.loop->conn, i,
+						e_text, e_size)) != 0)
+					{
+						return subres;
+					}
 
-			} else {
-				return bad_token(*i, &tokens[*i], text, state, e_text, e_size);
+				} else {
+					return bad_token(*i, &tokens[*i], text, state, e_text, e_size);
+				}
+			}
+		} else if (connection->type == CONN_HAS_RING) {
+			connection->ptr.ring = calloc(1, sizeof(connection_ring_t));
+			if (!connection->ptr.ring)
+				return return_error(e_text, e_size, TOP_E_ALLOC, "");
+			for (int subobj_i = 0; subobj_i < subobj_n; subobj_i++) {
+				if (json_str_eq(text, &tokens[*i], "start")) {
+					if (connection->ptr.ring->start != NULL)
+						return bad_token(*i, &tokens[*i], text, state, e_text, e_size);
+					if (json_str_cpy(text, &tokens[*i + 1],
+						&connection->ptr.ring->start))
+					{
+						return return_error(e_text, e_size, TOP_E_ALLOC, "");
+					}
+					*i += 2;
+				} else if (json_str_eq(text, &tokens[*i], "end")) {
+					if (connection->ptr.ring->end != NULL)
+						return bad_token(*i, &tokens[*i], text, state, e_text, e_size);
+					if (json_str_cpy(text, &tokens[*i + 1],
+						&connection->ptr.ring->end))
+					{
+						return return_error(e_text, e_size, TOP_E_ALLOC, "");
+					}
+					*i += 2;
+				} else if (json_str_eq(text, &tokens[*i], "ring")) {
+					if (connection->ptr.ring->var != NULL)
+						return bad_token(*i, &tokens[*i], text, state, e_text, e_size);
+					if (json_str_cpy(text, &tokens[*i + 1],
+						&connection->ptr.ring->var))
+					{
+						return return_error(e_text, e_size, TOP_E_ALLOC, "");
+					}
+					*i += 2;
+				} else if (json_str_eq(text, &tokens[*i], "conn")) {
+					if (connection->ptr.ring->nodes != NULL)
+						return bad_token(*i, &tokens[*i], text, state, e_text, e_size);
+					if (json_str_cpy(text, &tokens[*i + 1],
+						&connection->ptr.ring->nodes))
+					{
+						return return_error(e_text, e_size, TOP_E_ALLOC, "");
+					}
+					*i += 2;
+				} else if (json_str_eq(text, &tokens[*i], "attributes")) {
+					if (connection->ptr.ring->attributes != NULL)
+						return bad_token(*i, &tokens[*i], text, state, e_text, e_size);
+					if (json_str_cpy(text, &tokens[*i + 1],
+						&connection->ptr.ring->attributes))
+					{
+						return return_error(e_text, e_size, TOP_E_ALLOC, "");
+					}
+					*i += 2;
+				} else {
+					return bad_token(*i, &tokens[*i], text, state, e_text, e_size);
+				}
+			}
+		} else if (connection->type == CONN_HAS_LINE) {
+			connection->ptr.line = calloc(1, sizeof(connection_line_t));
+			if (!connection->ptr.line)
+				return return_error(e_text, e_size, TOP_E_ALLOC, "");
+			for (int subobj_i = 0; subobj_i < subobj_n; subobj_i++) {
+				if (json_str_eq(text, &tokens[*i], "start")) {
+					if (connection->ptr.line->start != NULL)
+						return bad_token(*i, &tokens[*i], text, state, e_text, e_size);
+					if (json_str_cpy(text, &tokens[*i + 1],
+						&connection->ptr.line->start))
+					{
+						return return_error(e_text, e_size, TOP_E_ALLOC, "");
+					}
+					*i += 2;
+				} else if (json_str_eq(text, &tokens[*i], "end")) {
+					if (connection->ptr.line->end != NULL)
+						return bad_token(*i, &tokens[*i], text, state, e_text, e_size);
+					if (json_str_cpy(text, &tokens[*i + 1],
+						&connection->ptr.line->end))
+					{
+						return return_error(e_text, e_size, TOP_E_ALLOC, "");
+					}
+					*i += 2;
+				} else if (json_str_eq(text, &tokens[*i], "line")) {
+					if (connection->ptr.line->var != NULL)
+						return bad_token(*i, &tokens[*i], text, state, e_text, e_size);
+					if (json_str_cpy(text, &tokens[*i + 1],
+						&connection->ptr.line->var))
+					{
+						return return_error(e_text, e_size, TOP_E_ALLOC, "");
+					}
+					*i += 2;
+				} else if (json_str_eq(text, &tokens[*i], "conn")) {
+					if (connection->ptr.line->nodes != NULL)
+						return bad_token(*i, &tokens[*i], text, state, e_text, e_size);
+					if (json_str_cpy(text, &tokens[*i + 1],
+						&connection->ptr.line->nodes))
+					{
+						return return_error(e_text, e_size, TOP_E_ALLOC, "");
+					}
+					*i += 2;
+				} else if (json_str_eq(text, &tokens[*i], "attributes")) {
+					if (connection->ptr.line->attributes != NULL)
+						return bad_token(*i, &tokens[*i], text, state, e_text, e_size);
+					if (json_str_cpy(text, &tokens[*i + 1],
+						&connection->ptr.line->attributes))
+					{
+						return return_error(e_text, e_size, TOP_E_ALLOC, "");
+					}
+					*i += 2;
+				} else {
+					return bad_token(*i, &tokens[*i], text, state, e_text, e_size);
+				}
 			}
 		}
 	} else if (((subobj_n == 1) || (subobj_n == 2)) &&
-		(json_str_eq(text, &tokens[*i], "attributes") ||
-		json_str_eq(text, &tokens[*i], "all"))) 
+		(json_str_eq(text, &tokens[*i], "all") ||
+		(json_str_eq(text, &tokens[*i], "attributes") &&
+		json_str_eq(text, &tokens[*i], "all")))) 
 	{
 		connection->type = CONN_HAS_ALL;
 		connection->ptr.all = calloc(1, sizeof(connection_all_t));
@@ -793,6 +916,8 @@ parse_connection (int subobj_n, jsmntok_t *tokens, char *text,
 				return bad_token(*i, &tokens[*i], text, state, e_text, e_size);
 			}
 		}
+	} else {
+		return bad_token(*i, &tokens[*i], text, state, e_text, e_size);
 	}
 	return 0;
 }

@@ -17,13 +17,10 @@
 	],
 	"connections": [
 		{
-			"loop": "i",
+			"ring": "i",
 			"start": "0",
 			"end": "len",
-			"conn": {
-				"from": "simplevec[i].gate[0]",
-				"to": "simplevec[(i + 1) % len].gate[1]"
-			}
+			"conn": "simplevec[i]"
 		}
 	]
 }},

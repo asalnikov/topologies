@@ -15,5 +15,6 @@ E(TOP_E_TOKEN, "Bad token")
 E(TOP_E_LOOP, "Bad loop boundaries")
 E(TOP_E_REGEX, "Bad regex")
 E(TOP_E_ROOT, "Root not found")
+E(TOP_E_NODE, "No such node")
 
 E(0, "No error information")
