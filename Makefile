@@ -4,7 +4,8 @@ CFLAGS = -Wall -Wextra -Werror -Og -g -std=gnu99 \
 CFLAGS_TINYEXPR = -ansi -Wall -Wshadow -O2
 SRC_DIR = src
 
-OBJFILES = $(patsubst %, $(SRC_DIR)/%, name_stack.o param_stack.o graph.o parser.o topologies.o errors.o)
+OBJFILES = $(patsubst %, $(SRC_DIR)/%, name_stack.o param_stack.o graph.o \
+	parser.o topologies.o errors.o products.o)
 
 main: $(SRC_DIR)/main.o libtopologies.so
 	$(CC) -L. -Wl,-rpath=$(CURDIR) $< -o $@ -ltopologies -lm

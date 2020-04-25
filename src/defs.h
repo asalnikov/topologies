@@ -125,9 +125,19 @@ typedef struct {
 	int n_params;
 } submodule_plain_t;
 
+typedef enum {
+	PROD_IS_CART,
+	PROD_IS_TENS,
+	PROD_IS_LEX,
+	PROD_IS_STRONG,
+	PROD_IS_ROOT
+} prod_type_t;
+
 typedef struct {
 	submodule_wrapper_t *a;
 	submodule_wrapper_t *b;
+	prod_type_t type;
+	char *root;
 } submodule_prod_t;
 
 typedef struct {
