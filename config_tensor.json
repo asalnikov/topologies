@@ -19,7 +19,8 @@
 			"end": "len - 1",
 			"conn": {
 				"from": "v[i]",
-				"to": "v[i + 1]"
+				"to": "v[i + 1]",
+				"attributes": "style=dotted"
 			}
 		}
 	]

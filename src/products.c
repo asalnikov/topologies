@@ -274,9 +274,27 @@ graphs_tens_product (graph_t *g_a, graph_t *g_b, graph_t *g_prod,
 						g_a->nodes[g_a->nodes[i].adj[k].n].name,
 						g_b->nodes[g_b->nodes[j].adj[l].n].name);
 
+					char *attrs;
+					if (g_a->nodes[i].adj[k].attributes &&
+						g_b->nodes[j].adj[l].attributes)
+					{
+						int attrs_len = strlen(g_a->nodes[i].adj[k].attributes) +
+							strlen(g_b->nodes[j].adj[l].attributes) + 3;
+						attrs = malloc(attrs_len);
+						if (!attrs)
+							return return_error(e_text, e_size, TOP_E_ALLOC, "");
+						sprintf(attrs, "%s, %s",
+							g_a->nodes[i].adj[k].attributes,
+							g_b->nodes[j].adj[l].attributes);
+					} else if (g_a->nodes[i].adj[k].attributes) {
+						attrs = g_a->nodes[i].adj[k].attributes;
+					} else {
+						attrs = g_b->nodes[j].adj[l].attributes;
+					}
+
 					if ((res = graph_add_edge_name(g_prod, name_buf,
 						name_buf_neigh,
-						g_b->nodes[j].adj[k].attributes)))
+						attrs)))
 					{
 						if (res == TOP_E_CONN) {
 							return_error(e_text, e_size, TOP_E_CONN,
@@ -285,6 +303,11 @@ graphs_tens_product (graph_t *g_a, graph_t *g_b, graph_t *g_prod,
 						} else {
 							return return_error(e_text, e_size, res, "");
 						}
+					}
+					if (g_a->nodes[i].adj[k].attributes &&
+						g_b->nodes[j].adj[l].attributes)
+					{
+						free(attrs);
 					}
 				}
 			}
@@ -416,6 +439,24 @@ graphs_strong_product (graph_t *g_a, graph_t *g_b, graph_t *g_prod,
 						g_a->nodes[g_a->nodes[i].adj[k].n].name,
 						g_b->nodes[g_b->nodes[j].adj[l].n].name);
 
+					char *attrs;
+					if (g_a->nodes[i].adj[k].attributes &&
+						g_b->nodes[j].adj[l].attributes)
+					{
+						int attrs_len = strlen(g_a->nodes[i].adj[k].attributes) +
+							strlen(g_b->nodes[j].adj[l].attributes) + 3;
+						attrs = malloc(attrs_len);
+						if (!attrs)
+							return return_error(e_text, e_size, TOP_E_ALLOC, "");
+						sprintf(attrs, "%s, %s",
+							g_a->nodes[i].adj[k].attributes,
+							g_b->nodes[j].adj[l].attributes);
+					} else if (g_a->nodes[i].adj[k].attributes) {
+						attrs = g_a->nodes[i].adj[k].attributes;
+					} else {
+						attrs = g_b->nodes[j].adj[l].attributes;
+					}
+
 					if ((res = graph_add_edge_name(g_prod, name_buf,
 						name_buf_neigh,
 						g_b->nodes[j].adj[k].attributes)))
@@ -427,6 +468,11 @@ graphs_strong_product (graph_t *g_a, graph_t *g_b, graph_t *g_prod,
 						} else {
 							return return_error(e_text, e_size, res, "");
 						}
+					}
+					if (g_a->nodes[i].adj[k].attributes &&
+						g_b->nodes[j].adj[l].attributes)
+					{
+						free(attrs);
 					}
 				}
 			}

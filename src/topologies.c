@@ -969,6 +969,7 @@ free_submodule (submodule_wrapper_t *s)
 		free(s->ptr.prod->a);
 		free_submodule(s->ptr.prod->b);
 		free(s->ptr.prod->b);
+		free(s->ptr.prod->root);
 		free(s->ptr.prod);
 	}
 }
