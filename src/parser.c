@@ -318,7 +318,15 @@ parse_submodule (int subobj_n, jsmntok_t *tokens, char *text,
 		if (!submodule->ptr.prod) {
 			return return_error(e_text, e_size, TOP_E_ALLOC, "");
 		}
-		if (!json_str_eq(text, &tokens[*i], "cartesian")) {
+		if (json_str_eq(text, &tokens[*i], "cartesian")) {
+			submodule->ptr.prod->type = PROD_IS_CART;
+		} else if (json_str_eq(text, &tokens[*i], "tensor")) {
+			submodule->ptr.prod->type = PROD_IS_TENS;
+		} else if (json_str_eq(text, &tokens[*i], "lexicographical")) {
+			submodule->ptr.prod->type = PROD_IS_LEX;
+		} else if (json_str_eq(text, &tokens[*i], "strong")) {
+			submodule->ptr.prod->type = PROD_IS_STRONG;
+		} else {
 			return bad_token(*i, &tokens[*i], text, state, e_text, e_size);
 		}
 		*i += 1;
