@@ -482,18 +482,18 @@ add_submodule (submodule_wrapper_t *smodule,
 			if ((res = graphs_cart_product(g_a, g_b, g_prod, e_text, e_size))) {
 				return res;
 			}
-	//	} else if (smodule->ptr.prod->type == PROD_IS_TENS) {
-	//		if ((res = graphs_tens_product(g_a, g_b, g_prod, e_text, e_size))) {
-	//			return res;
-	//		}
-	//	} else if (smodule->ptr.prod->type == PROD_IS_LEX) {
-	//		if ((res = graphs_lex_product(g_a, g_b, g_prod, e_text, e_size))) {
-	//			return res;
-	//		}
-	//	} else if (smodule->ptr.prod->type == PROD_IS_STRONG) {
-	//		if ((res = graphs_strong_product(g_a, g_b, g_prod, e_text, e_size))) {
-	//			return res;
-	//		}
+		} else if (smodule->ptr.prod->type == PROD_IS_TENS) {
+			if ((res = graphs_tens_product(g_a, g_b, g_prod, e_text, e_size))) {
+				return res;
+			}
+		} else if (smodule->ptr.prod->type == PROD_IS_LEX) {
+			if ((res = graphs_lex_product(g_a, g_b, g_prod, e_text, e_size))) {
+				return res;
+			}
+		} else if (smodule->ptr.prod->type == PROD_IS_STRONG) {
+			if ((res = graphs_strong_product(g_a, g_b, g_prod, e_text, e_size))) {
+				return res;
+			}
 	//	} else if (smodule->ptr.prod->type == PROD_IS_ROOT) {
 	//		if ((res = graphs_root_product(g_a, g_b, g_prod,
 	//			smodule->ptr.prod->root, e_text, e_size)))
