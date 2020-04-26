@@ -1,7 +1,6 @@
 [
 { "simplemodule": {
-	"name": "gft_simple",
-	"gates": [ { "g": "ng" } ]
+	"name": "gft_simple"
 }},
 
 { "module": {
@@ -10,8 +9,7 @@
 	{
 		"name": "node",
 		"module": "gft_simple",
-		"size": "w^h",
-		"params": [{"ng":"0"}]
+		"size": "w^h"
 	},
 	{
 		"if": "h > 0",
@@ -48,8 +46,7 @@
 	"submodules": [ {
 		"name": "node",
 		"module": "gft_simple",
-		"size": "width",
-		"params":[{"ng":"width"}]
+		"size": "width"
 	}],
 	"connections": [
 	{

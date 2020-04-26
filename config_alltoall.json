@@ -1,23 +1,18 @@
 [
 { "simplemodule": {
-	"name": "alltoall_simple"
+	"name": "simple"
 }},
 
 { "module": {
 	"name": "alltoall",
 	"submodules": [ {
 		"name": "node",
-		"module": "alltoall_simple",
-		"size": "20"
+		"module": "simple",
+		"size": "10"
 	}],
 	"connections": [
 	{
-		"all": "node\\[[0-9]\\]",
-		"attributes": "style=dotted"
-	},
-	{
-		"all": "node\\[[0-9]\\{2\\}\\]",
-		"attributes": "style=bold"
+		"all": "node"
 	}]
 }},
 

@@ -1,9 +1,6 @@
 [
 { "simplemodule": {
-	"name": "simple",
-	"gates": [
-		{ "gate": "2" }
-	]
+	"name": "simple"
 }},
 
 { "module": {
