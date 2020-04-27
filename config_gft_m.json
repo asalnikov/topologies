@@ -1,15 +1,25 @@
-[
+[{ "simplemodule": {
+	"name": "gft_simple_router"
+}},
 { "simplemodule": {
-	"name": "gft_simple"
+	"name": "gft_simple_endnode",
+	"attributes": "shape=box"
 }},
 
 { "module": {
 	"name": "gft_layer",
 	"submodules": [
 	{
-		"name": "node",
-		"module": "gft_simple",
-		"size": "w^h"
+		"if": "h == 2",
+		"then": {
+			"name": "node",
+			"module": "gft_simple_endnode",
+			"size": "w^h"
+		}, "else": {
+			"name": "node",
+			"module": "gft_simple_router",
+			"size": "w^h"
+		}
 	},
 	{
 		"if": "h > 0",
@@ -45,7 +55,7 @@
 	"name": "gft_alltoall",
 	"submodules": [ {
 		"name": "node",
-		"module": "gft_simple",
+		"module": "gft_simple_endnode",
 		"size": "width"
 	}],
 	"connections": [

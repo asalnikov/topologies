@@ -58,7 +58,7 @@ main (int argc, char *argv[])
 		topologies_network_destroy(net);
 		exit(EXIT_FAILURE);
 	}
-	topologies_graph_print(graph, stdout, true);
+	//topologies_graph_print(graph, stdout, true);
 	if (topologies_graph_compact(&graph, e_text, e_size)) {
 		topologies_graph_destroy(graph);
 		topologies_network_destroy(net);
