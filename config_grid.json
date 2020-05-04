@@ -7,7 +7,7 @@
 	"name": "grid_ring",
 	"submodules": [
 		{
-			"name": "simplevec",
+			"name": "s",
 			"module": "grid_simple",
 			"size": "len"
 		}
@@ -17,7 +17,7 @@
 			"line": "i",
 			"start": "0",
 			"end": "len",
-			"conn": "simplevec[i]",
+			"conn": "s[i]",
 			"attributes": "style=dotted"
 		}
 	]

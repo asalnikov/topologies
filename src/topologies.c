@@ -910,7 +910,7 @@ topologies_definition_to_graph (void *v, void **r_g, char *e_text, size_t e_size
 	g = graph_create();
 	if (!g)
 		return return_error(e_text, e_size, TOP_E_ALLOC, "");
-	s = name_stack_create("network");
+	s = name_stack_create("n");
 	if (!s) {
 		free(g->nodes);
 		free(g);

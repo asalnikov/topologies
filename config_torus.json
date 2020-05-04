@@ -7,7 +7,7 @@
 	"name": "ring",
 	"submodules": [
 		{
-			"name": "simplevec",
+			"name": "s",
 			"module": "simple",
 			"size": "len"
 		}
@@ -17,7 +17,7 @@
 			"ring": "i",
 			"start": "0",
 			"end": "len",
-			"conn": "simplevec[i]"
+			"conn": "s[i]"
 		}
 	]
 }},
@@ -53,6 +53,6 @@
 
 { "network": { 
 	"module": "prod",
-	"params": [ { "len": "3" }, { "depth": "3" } ]
+	"params": [ { "len": "4" }, { "depth": "2" } ]
 }}
 ]
