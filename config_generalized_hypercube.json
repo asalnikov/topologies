@@ -1,0 +1,133 @@
+[
+{ "simplemodule": {
+	"name": "ghc_simple"
+}},
+
+{ "module": {
+	"name": "ghc_1",
+	"submodules": [
+	{
+		"name": "n",
+		"module": "ghc_simple",
+		"size": "k1"
+	}],
+	"connections": [{
+		"loop": "i",
+		"start": "1",
+		"end": "k1",
+		"conn": {
+			"loop": "j",
+			"start": "0",
+			"end": "i",
+			"conn": {
+				"from": "n[i]",
+				"to": "n[j]"
+			}
+		}
+	}]
+}},
+
+{ "module": {
+	"name": "ghc_2",
+	"submodules": [{
+		"name": "prev",
+		"module": "ghc_1",
+		"size": "k2"
+	}],
+	"connections": [{
+		"loop": "l",
+		"start": "0",
+		"end": "k1",
+		"conn": {
+			"loop": "i",
+			"start": "1",
+			"end": "k2",
+			"conn": {
+				"loop": "j",
+				"start": "0",
+				"end": "i",
+				"conn": {
+					"from": "prev[i].n[l]",
+					"to": "prev[j].n[l]"
+				}
+			}
+		}
+	}]
+}},
+
+{ "module": {
+	"name": "ghc_3",
+	"submodules": [{
+		"name": "prev",
+		"module": "ghc_2",
+		"size": "k3"
+	}],
+	"connections": [{
+		"loop": "l1",
+		"start": "0",
+		"end": "k1",
+		"conn": {
+			"loop": "l2",
+			"start": "0",
+			"end": "k2",
+			"conn": {
+				"loop": "i",
+				"start": "1",
+				"end": "k3",
+				"conn": {
+					"loop": "j",
+					"start": "0",
+					"end": "i",
+					"conn": {
+						"from": "prev[i].prev[l2].n[l1]",
+						"to": "prev[j].prev[l2].n[l1]"
+					}
+				}
+			}
+		}
+	}]
+}},
+
+{ "module": {
+	"name": "ghc_4",
+	"submodules": [{
+		"name": "prev",
+		"module": "ghc_3",
+		"size": "k4"
+	}],
+	"connections": [{
+		"loop": "l1",
+		"start": "0",
+		"end": "k1",
+		"conn": {
+			"loop": "l2",
+			"start": "0",
+			"end": "k2",
+			"conn": {
+				"loop": "l3",
+				"start": "0",
+				"end": "k3",
+				"conn": {
+					"loop": "i",
+					"start": "1",
+					"end": "k4",
+					"conn": {
+						"loop": "j",
+						"start": "0",
+						"end": "i",
+						"conn": {
+							"from": "prev[i].prev[l3].prev[l2].n[l1]",
+							"to": "prev[j].prev[l3].prev[l2].n[l1]"
+						}
+					}
+				}
+			}
+		}
+	}]
+}},
+
+{ "network": {
+	"module": "ghc_2",
+	"params": [ { "k1": "4" }, { "k2": "4" }, { "k3": "3" } ]
+}}
+]

@@ -4,122 +4,28 @@
 }},
 
 { "module": {
-	"name": "flat_fly_1",
+	"name": "flat_fly_net",
 	"submodules": [
 	{
 		"name": "n",
 		"module": "flat_fly_simple",
-		"size": "k1"
+		"size": "k^(n-1)"
 	}],
 	"connections": [{
 		"loop": "i",
-		"start": "1",
-		"end": "k1",
-		"conn": {
-			"loop": "j",
-			"start": "0",
-			"end": "i",
-			"conn": {
-				"from": "n[i]",
-				"to": "n[j]"
-			}
-		}
-	}]
-}},
-
-{ "module": {
-	"name": "flat_fly_2",
-	"submodules": [{
-		"name": "prev",
-		"module": "flat_fly_1",
-		"size": "k2"
-	}],
-	"connections": [{
-		"loop": "l",
 		"start": "0",
-		"end": "k1",
+		"end": "k^(n-1)",
 		"conn": {
-			"loop": "i",
-			"start": "1",
-			"end": "k2",
-			"conn": {
-				"loop": "j",
-				"start": "0",
-				"end": "i",
-				"conn": {
-					"from": "prev[i].n[l]",
-					"to": "prev[j].n[l]"
-				}
-			}
-		}
-	}]
-}},
-
-{ "module": {
-	"name": "flat_fly_3",
-	"submodules": [{
-		"name": "prev",
-		"module": "flat_fly_2",
-		"size": "k3"
-	}],
-	"connections": [{
-		"loop": "l1",
-		"start": "0",
-		"end": "k1",
-		"conn": {
-			"loop": "l2",
+			"loop": "m",
 			"start": "0",
-			"end": "k2",
+			"end": "k",
 			"conn": {
-				"loop": "i",
+				"loop": "d",
 				"start": "1",
-				"end": "k3",
+				"end": "n",
 				"conn": {
-					"loop": "j",
-					"start": "0",
-					"end": "i",
-					"conn": {
-						"from": "prev[i].prev[l2].n[l1]",
-						"to": "prev[j].prev[l2].n[l1]"
-					}
-				}
-			}
-		}
-	}]
-}},
-
-{ "module": {
-	"name": "flat_fly_4",
-	"submodules": [{
-		"name": "prev",
-		"module": "flat_fly_3",
-		"size": "k4"
-	}],
-	"connections": [{
-		"loop": "l1",
-		"start": "0",
-		"end": "k1",
-		"conn": {
-			"loop": "l2",
-			"start": "0",
-			"end": "k2",
-			"conn": {
-				"loop": "l3",
-				"start": "0",
-				"end": "k3",
-				"conn": {
-					"loop": "i",
-					"start": "1",
-					"end": "k4",
-					"conn": {
-						"loop": "j",
-						"start": "0",
-						"end": "i",
-						"conn": {
-							"from": "prev[i].prev[l3].prev[l2].n[l1]",
-							"to": "prev[j].prev[l3].prev[l2].n[l1]"
-						}
-					}
+					"from": "n[i]",
+					"to": "n[i + (m - (floor(i/(k^(d-1))) % k) )*k^(d-1)]"
 				}
 			}
 		}
@@ -127,7 +33,7 @@
 }},
 
 { "network": {
-	"module": "flat_fly_3",
-	"params": [ { "k1": "3" }, { "k2": "3" }, { "k3": "3" } ]
+	"module": "flat_fly_net",
+	"params": [ { "k": "2" }, { "n": "4" } ]
 }}
 ]

@@ -53,6 +53,6 @@
 
 { "network": { 
 	"module": "prod",
-	"params": [ { "len": "4" }, { "depth": "2" } ]
+	"params": [ { "len": "3" }, { "depth": "3" } ]
 }}
 ]
