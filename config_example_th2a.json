@@ -1,0 +1,114 @@
+[
+{ "simplemodule": {
+	"name": "xgft_simple"
+}},
+
+{ "module": {
+	"name": "xgft_layer_0",
+	"submodules": [
+	{
+		"name": "n",
+		"module": "xgft_simple",
+		"size": "1"
+	}]
+}},
+
+{ "module": {
+	"name": "xgft_layer_1",
+	"submodules": [
+	{
+		"name": "n",
+		"module": "xgft_simple",
+		"size": "w1"
+	},
+	{
+		"name": "p",
+		"module": "xgft_layer_0",
+		"size": "m1"
+	}],
+	"connections": [
+	{
+		"loop": "i",
+		"start": "0",
+		"end": "w1",
+		"conn": {
+			"loop": "j",
+			"start": "0",
+			"end": "m1",
+			"conn": {
+				"from": "p[j].n[floor(i/w1)]",
+				"to": "n[i]"
+			}
+		}
+	}
+	]
+}},
+
+{ "module": {
+	"name": "xgft_layer_2",
+	"submodules": [
+	{
+		"name": "n",
+		"module": "xgft_simple",
+		"size": "w1*w2"
+	},
+	{
+		"name": "p",
+		"module": "xgft_layer_1",
+		"size": "m2"
+	}],
+	"connections": [
+	{
+		"loop": "i",
+		"start": "0",
+		"end": "w1*w2",
+		"conn": {
+			"loop": "j",
+			"start": "0",
+			"end": "m2",
+			"conn": {
+				"from": "p[j].n[floor(i/w2)]",
+				"to": "n[i]"
+			}
+		}
+	}
+	]
+}},
+
+{ "module": {
+	"name": "xgft_layer_3",
+	"submodules": [
+	{
+		"name": "n",
+		"module": "xgft_simple",
+		"size": "w1*w2*w3"
+	},
+	{
+		"name": "p",
+		"module": "xgft_layer_2",
+		"size": "m3"
+	}],
+	"connections": [
+	{
+		"loop": "i",
+		"start": "0",
+		"end": "w1*w2*w3",
+		"conn": {
+			"loop": "j",
+			"start": "0",
+			"end": "m3",
+			"conn": {
+				"from": "p[j].n[floor(i/w3)]",
+				"to": "n[i]"
+			}
+		}
+	}
+	]
+}},
+
+{ "network": {
+	"module": "xgft_layer_3",
+	"params": [ { "m1": "32" }, { "m2": "12" }, { "m3": "48" },
+		{ "w1": "1" }, { "w2": "12" }, { "w3": "12" } ]
+}}
+]

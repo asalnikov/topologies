@@ -1,0 +1,119 @@
+[
+{ "simplemodule": {
+	"name": "simple"
+}},
+
+{ "module": {
+	"name": "layer_0",
+	"submodules": [
+	{
+		"name": "n",
+		"module": "simple",
+		"size": "17"
+	}]
+}},
+
+{ "module": {
+	"name": "layer_1",
+	"submodules": [
+	{
+		"name": "l",
+		"module": "simple",
+		"size": "4"
+	},
+	{
+		"name": "b",
+		"module": "layer_0",
+		"size": "2"
+	},
+	{
+		"name": "u",
+		"module": "simple",
+		"size": "3"
+	}],
+	"connections": [
+	{
+		"loop": "i",
+		"start": "0",
+		"end": "17",
+		"conn": {
+			"loop": "j",
+			"start": "0",
+			"end": "2",
+			"conn": {
+				"from": "b[j].n[i]",
+				"to": "l[j]"
+			}
+		}
+	},
+	{
+		"loop": "i",
+		"start": "0",
+		"end": "17",
+		"conn": {
+			"loop": "j",
+			"start": "0",
+			"end": "2",
+			"conn": {
+				"from": "b[j].n[i]",
+				"to": "l[j + 2]"
+			}
+		}
+	},
+	{
+		"loop": "i",
+		"start": "0",
+		"end": "4",
+		"conn": {
+			"loop": "j",
+			"start": "0",
+			"end": "3",
+			"conn": {
+				"from": "l[i]",
+				"to": "u[j]"
+			}
+		}
+	}
+	]
+}},
+
+{ "module": {
+	"name": "layer_2",
+	"submodules": [
+	{
+		"name": "n",
+		"module": "simple",
+		"size": "2"
+	},
+	{
+		"name": "p",
+		"module": "layer_1",
+		"size": "32"
+	}],
+	"connections": [
+	{
+		"loop": "i",
+		"start": "0",
+		"end": "32",
+		"conn": {
+			"loop": "j",
+			"start": "0",
+			"end": "3",
+			"conn": {
+				"loop": "k",
+				"start": "0",
+				"end": "2",
+				"conn": {
+					"from": "p[i].u[j]",
+					"to": "n[k]"
+				}
+			}
+		}
+	}
+	]
+}},
+
+{ "network": {
+	"module": "layer_2"
+}}
+]
