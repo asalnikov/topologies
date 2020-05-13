@@ -1,0 +1,136 @@
+ws-symbol = ' ' | '\n' | '\r' | '\t' ;
+ws = { ws-symbol } ;
+letter = "A" | "B" | "C" | "D" | "E" | "F" | "G" | "H" | "I" | "J" | "K" | "L" |
+         "M" | "N" | "O" | "P" | "Q" | "R" | "S" | "T" | "U" | "V" | "W" | "X" |
+	 "Y" | "Z" | "a" | "b" | "c" | "d" | "e" | "f" | "g" | "h" | "i" | "j" |
+	 "k" | "l" | "m" | "n" | "o" | "p" | "q" | "r" | "s" | "t" | "u" | "v" |
+	 "w" | "x" | "y" | "z";
+symbol = "[" | "]" | "{" | "}" | "(" | ")" | "<" | ">" | "'" | "=" | "|" | "." |
+         "," | ";" | "_" | "%" | "$" | "@" | "!" | "?" | "^" | "&" | ":" | "/" |
+	 "#" | '\"' | '|' | '*' | '+' | '\';
+digit = "0" | "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9";
+number = digit, { digit };
+
+char = letter | symbol | digit;
+word = char, { char };
+quoted-word = '"', word, '"';
+
+array-element = "{", ws, quoted-word, ws, ":", ws, quoted-word, ws, "}";
+array = "[", ws, { (array-element, ws, ",", ws) }, "]";
+
+attributes-statement = '"attributes"', ws, ":", ws, quoted-word;
+module-statement =     '"module"',     ws, ":", ws, quoted-word;
+nodes-statement =      '"nodes"',      ws, ":", ws, quoted-word;
+start-statement =      '"start"',      ws, ":", ws, quoted-word;
+conn-statement =       '"conn"',       ws, ":", ws, quoted-word;
+from-statement =       '"from"',       ws, ":", ws, quoted-word;
+loop-statement =       '"loop"',       ws, ":", ws, quoted-word;
+name-statement =       '"name"',       ws, ":", ws, quoted-word;
+ring-statement =       '"ring"',       ws, ":", ws, quoted-word;
+root-statement =       '"root"',       ws, ":", ws, quoted-word;
+size-statement =       '"size"',       ws, ":", ws, quoted-word;
+all-statement =        '"all"',        ws, ":", ws, quoted-word;
+end-statement =        '"end"',        ws, ":", ws, quoted-word;
+if-statement =         '"if"',         ws, ":", ws, quoted-word;
+to-statement =         '"to"',         ws, ":", ws, quoted-word;
+params-statement =     '"params"',     ws, ":", ws, array;
+gates-statement =      '"gates"',      ws, ":", ws, array;
+then-subm-statement =  '"then"',       ws, ":", ws, submodule;
+else-subm-statement =  '"else"',       ws, ":", ws, submodule;
+with-statement =       '"with"',       ws, ":", ws, submodule;
+then-conn-statement =  '"then"',       ws, ":", ws, connection;
+else-conn-statement =  '"else"',       ws, ":", ws, connection;
+loop-conn-statement =  '"conn"',       ws, ":", ws, connection;
+
+plain-submodule = "{", ws, name-statement, ws,
+                  ",", ws, module-statement, ws,
+                  [(",", ws, size-statement, ws)],
+                  [(",", ws, params-statement, ws)],
+                  "}";
+
+product-name = '"cartesian"' | '"tensor"' | '"lexicographical"' |
+               '"strong"';
+
+product-submodule = "{", ws, product-name, ws, ":", ws, "[", ws,
+                    submodule, ws, ",", ws, submodule, ws, "]", ws, "}";
+
+root-product-name = '"root"' | '"rooted"';
+
+root-product-submodule = "{", ws, root-product-name, ws, ":", ws, "[", ws,
+                    submodule, ws, ",", ws, submodule, ws, "]", ws, ",", ws,
+		    root-statement, ws, "}";
+
+cond-submodule = "{", ws, if-statement, ws,
+		 ",", ws, then-subm-statement, ws,
+                 [(",", ws, else-subm-statement, ws)],
+                 "}";
+
+submodule = plain-submodule | product-submodule | root-product-submodule |
+            cond-submodule;
+
+submodules-statement = "[", ws, { (submodule, ws, ",", ws) }, "]";
+
+replace = "{", ws, nodes-statement, ws,
+          ",", ws, with-statement, ws, "}";
+
+replace-statement = "[", ws, { (replace, ws, ",", ws) }, "]";
+
+plain-connection = "{", ws, from-statement, ws,
+                   ",", ws, to-statement, ws,
+                   [(",", ws, attributes-statement, ws)],
+                   "}";
+
+cond-connection = "{", ws, if-statement, ws,
+                  ",", ws, then-conn-statement, ws,
+                  [(",", ws, else-conn-statement, ws)],
+                  "}";
+
+loop-connection = "{", ws, loop-statement, ws,
+                  ",", ws, start-statement, ws,
+                  ",", ws, end-statement, ws,
+                  ",", ws, loop-conn-statement, ws,
+                  "}";
+
+ring-connection = "{", ws, ring-statement, ws,
+                   ",", ws, start-statement, ws,
+                   ",", ws, end-statement, ws,
+                   ",", ws, conn-statement, ws,
+                   [(",", ws, attributes-statement, ws)],
+                   "}";
+
+line-connection = "{", ws, line-statement, ws,
+                   ",", ws, start-statement, ws,
+                   ",", ws, end-statement, ws,
+                   ",", ws, conn-statement, ws,
+                   [(",", ws, attributes-statement, ws)],
+                   "}";
+
+all-connection = "{", ws, all-statement, ws,
+                 [(",", ws, attributes-statement, ws)],
+                 "}";
+
+connection = plain-connection | loop-connection | all-connection |
+             cond-connection | ring-connection | line-connection;
+
+connections-statement = "[", ws, { (connection, ws, ",", ws) }, "]";
+
+simple-module = "{", ws, '"simplemodule"', ws, ":", ws, "{",
+                ws, name-statement, ws,
+                [(",", ws, attributes-statement, ws)],
+                [(",", ws, gates-statement, ws)],
+                "}", ws, "}";
+
+compound-module = "{", ws, '"module"', ws, ":", ws, "{",
+                  ws, name-statement, ws,
+                  [(",", ws, params-statement, ws)],
+                  [(",", ws, gates-statement, ws)],
+                  [(",", ws, submodules-statement, ws)],
+                  [(",", ws, connections-statement, ws)],
+                  [(",", ws, replace-statement, ws)],
+                  "}"; 
+
+network = "{", ws, '"network"', ws, ":", ws, "{",
+          ws, module-statement, ws,
+          [(",", ws, params-statement, ws)],
+          "}", ws, "}";
+
