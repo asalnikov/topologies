@@ -67,9 +67,8 @@ add_auto_gate (graph_t *g, int *r_n_node, char *node_name, name_stack_t *s)
 		sprintf(auto_name, "_auto[%d]", j);
 		bool seen = false;
 		char *full_name = get_full_name(s, auto_name, -1);
-		for (int k = 0; k < g->nodes[n_node].n_adj; k++) {
-			if (strcmp(g->nodes[g->nodes[n_node].adj[k].n].name,
-				full_name) == 0)
+		for (int k = 0; k < g->n_nodes; k++) {
+			if (strcmp(g->nodes[k].name, full_name) == 0)
 			{
 				seen = true;
 			}
@@ -100,9 +99,8 @@ add_auto_gate_full_name (graph_t *g, int *r_n_node, char *full_node_name)
 		bool seen = false;
 		char *full_name = malloc(strlen(full_node_name) + 18);
 		sprintf(full_name, "%s.%s", full_node_name, auto_name);
-		for (int k = 0; k < g->nodes[n_node].n_adj; k++) {
-			if (strcmp(g->nodes[g->nodes[n_node].adj[k].n].name,
-				full_name) == 0)
+		for (int k = 0; k < g->n_nodes; k++) {
+			if (strcmp(g->nodes[k].name, full_name) == 0)
 			{
 				seen = true;
 			}
@@ -512,6 +510,9 @@ traverse_and_add_conns (connection_wrapper_t *c, graph_t *g,
 				if (strncmp(stack_name, g->nodes[i].name,
 					strlen(stack_name)) == 0)
 				{
+					if ((g->nodes[i].type == NODE_REPLACED) ||
+					(g->nodes[i].type == NODE_REPLACED_T))
+						continue;
 					selected_n++;
 					if (selected_n >= selected_cap) {
 						selected_cap += selected_blk;
