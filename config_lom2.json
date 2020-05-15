@@ -1,0 +1,39 @@
+[{ "simplemodule": { "name": "switch", "attributes": "shape=box" }},
+{ "simplemodule": { "name": "node", "attributes": "shape=ellipse" }},
+{ "module": {
+    "name": "dim_0",
+    "submodules": [
+        { "name": "s", "module": "switch" },
+        { "name": "n", "module": "node", "size": "n_nodes" }
+    ],
+    "connections": [
+    { "loop": "i", "start": "0", "end": "n_nodes", "conn": {
+	    "from": "s", "to": "n[i]"
+    }}]
+}},
+{ "module": {
+    "name": "dim_1",
+    "submodules": [{ "name": "d3", "module": "dim_0", "size": "k1" }],
+    "connections": [{ "all-match": "s$" }]
+}},
+{ "module": {
+    "name": "dim_2",
+    "submodules": [{ "name": "d2", "module": "dim_1", "size": "k2" }],
+    "connections": [{
+        "loop": "i", "start": "0", "end": "k1", "conn": {
+            "all": "j", "start": "0", "end": "k2", "conn": "d2[j].d3[i].s"
+    }}]
+}},
+{ "module": {
+    "name": "dim_3",
+    "submodules": [{ "name": "d1", "module": "dim_2", "size": "k3" }],
+    "connections": [{
+        "loop": "i", "start": "0", "end": "k1", "conn": {
+            "loop": "j", "start": "0", "end": "k2", "conn": {
+                "all": "k", "start": "0", "end": "k3", "conn": "d1[k].d2[j].d3[i].s"
+    }}}]
+}},
+{ "network": { 
+    "module": "dim_3",
+    "params": [{ "k1": "4" }, { "k2": "8" }, { "k3": "8" }, { "n_nodes": "8" }]
+}}]

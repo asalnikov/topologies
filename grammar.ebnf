@@ -27,9 +27,11 @@ from-statement =       '"from"',       ws, ":", ws, quoted-word;
 loop-statement =       '"loop"',       ws, ":", ws, quoted-word;
 name-statement =       '"name"',       ws, ":", ws, quoted-word;
 ring-statement =       '"ring"',       ws, ":", ws, quoted-word;
+line-statement =       '"line"',       ws, ":", ws, quoted-word;
+all-list-statement =   '"all"',        ws, ":", ws, quoted-word;
 root-statement =       '"root"',       ws, ":", ws, quoted-word;
 size-statement =       '"size"',       ws, ":", ws, quoted-word;
-all-statement =        '"all"',        ws, ":", ws, quoted-word;
+all-statement =        '"all-match"',  ws, ":", ws, quoted-word;
 end-statement =        '"end"',        ws, ":", ws, quoted-word;
 if-statement =         '"if"',         ws, ":", ws, quoted-word;
 to-statement =         '"to"',         ws, ":", ws, quoted-word;
@@ -105,12 +107,20 @@ line-connection = "{", ws, line-statement, ws,
                    [ ",", ws, attributes-statement, ws ],
                    "}";
 
+all-list-connection = "{", ws, all-list-statement, ws,
+                   ",", ws, start-statement, ws,
+                   ",", ws, end-statement, ws,
+                   ",", ws, conn-statement, ws,
+                   [ ",", ws, attributes-statement, ws ],
+                   "}";
+
 all-connection = "{", ws, all-statement, ws,
                  [ ",", ws, attributes-statement, ws ],
                  "}";
 
 connection = plain-connection | loop-connection | all-connection |
-             cond-connection | ring-connection | line-connection;
+             cond-connection | ring-connection | line-connection |
+             all-list-connection;
 
 connections-statement = "[", ws, { (connection, ws, ",", ws) }, "]";
 
