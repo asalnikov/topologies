@@ -1,113 +1,52 @@
-[{ "simplemodule": {
-	"name": "gft_simple_router"
-}},
-{ "simplemodule": {
-	"name": "gft_simple_endnode",
-	"attributes": "shape=box"
-}},
-
+[{ "simplemodule": { "name": "gft_router" }},
+{ "simplemodule": { "name": "gft_endnode", "attributes": "shape=box" }},
+{ "module": { "name": "empty" }},
 { "module": {
-	"name": "gft_layer",
-	"submodules": [
-	{
-		"if": "h == 2",
-		"then": {
-			"name": "node",
-			"module": "gft_simple_endnode",
-			"size": "w^h"
-		}, "else": {
-			"name": "node",
-			"module": "gft_simple_router",
-			"size": "w^h"
-		}
-	},
-	{
-		"if": "h > 0",
-		"then": {
-			"name": "prev",
-			"module": "gft_layer",
-			"size": "m",
-			"params": [ { "h": "h-1" } ]
-		}
-	}],
-	"connections": [
-	{
-		"if": "h > 0",
-		"then": {
-			"loop": "i",
-			"start": "0",
-			"end": "w^h",
-			"conn": {
-				"loop": "j",
-				"start": "0",
-				"end": "m",
-				"conn": {
-					"from": "prev[j].node[floor(i/w)]",
-					"to": "node[i]"
-				}
-			}
-		}
-	}
-	]
+    "name": "gft_layer",
+    "submodules": [{
+        "if": "h == 2",
+        "then": {
+            "name": "node", "module": "gft_endnode", "size": "w^h"
+        }, "else": {
+            "name": "node", "module": "gft_router", "size": "w^h"
+    }}, {
+        "if": "h > 0",
+        "then": {
+            "name": "prev", "module": "gft_layer", "size": "m",
+            "params": [ { "h": "h-1" } ]
+    }}],
+    "connections": [{
+        "if": "h > 0",
+        "then": {
+            "loop": "i", "start": "0", "end": "w^h",
+            "conn": {
+                "loop": "j", "start": "0", "end": "m",
+                "conn": {
+                    "from": "prev[j].node[floor(i/w)]",
+                    "to": "node[i]"
+    }}}}]
 }},
-
 { "module": {
-	"name": "gft_alltoall",
-	"submodules": [ {
-		"name": "node",
-		"module": "gft_simple_endnode",
-		"size": "width"
-	}],
-	"connections": [
-	{
-		"loop": "i",
-		"start": "1",
-		"end": "width",
-		"conn": {
-			"loop": "j",
-			"start": "0",
-			"end": "i",
-			"conn": {
-				"from": "node[i]",
-				"to": "node[j]"
-			}
-		}
-	}
-	]
+    "name": "gft_alltoall",
+    "submodules": [{
+        "name": "node", "module": "gft_endnode", "size": "3"
+    }],
+    "connections": [{
+        "all-match": "gft.node\\[[0-2]\\]$"
+    }]
 }},
-
 { "module": {
-	"name": "empty"
+    "name": "gft_m",
+    "submodules": [{
+        "name": "gft", "module": "gft_layer",
+        "params": [ { "h": "2" }, { "m": "2" }, { "w": "3" } ]
+    }],
+    "replace": [{
+        "nodes": "gft.node\\[[0-2]\\]$",
+        "with": { "name": "gft", "module": "gft_alltoall" }
+    }, {
+        "nodes": "gft.node\\[8\\]$",
+        "with": { "name": "e", "module": "empty" }
+    }]
 }},
-
-{ "module": {
-	"name": "gft_m",
-	"submodules": [
-	{
-		"name": "gft",
-		"module": "gft_layer",
-		"params": [ { "h": "2" }, { "m": "2" }, { "w": "3" } ]
-	}],
-	"replace": [
-	{
-		"nodes": "gft.node\\[[0-2]\\](._auto\\[*\\])?$",
-		"with": {
-			"name": "gft",
-			"module": "gft_alltoall",
-			"params": [ { "width": "3" } ]
-		}
-	},
-	{
-		"nodes": "gft.node\\[8\\]$",
-		"with": {
-			"name": "e",
-			"module": "empty"
-		}
-	}
-	]
-}},
-
-{ "network": {
-	"module": "gft_m"
-}}
-]
+{ "network": { "module": "gft_m" }}]
