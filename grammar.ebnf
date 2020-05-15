@@ -2,12 +2,12 @@ ws-symbol = ' ' | '\n' | '\r' | '\t' ;
 ws = { ws-symbol } ;
 letter = "A" | "B" | "C" | "D" | "E" | "F" | "G" | "H" | "I" | "J" | "K" | "L" |
          "M" | "N" | "O" | "P" | "Q" | "R" | "S" | "T" | "U" | "V" | "W" | "X" |
-	 "Y" | "Z" | "a" | "b" | "c" | "d" | "e" | "f" | "g" | "h" | "i" | "j" |
-	 "k" | "l" | "m" | "n" | "o" | "p" | "q" | "r" | "s" | "t" | "u" | "v" |
-	 "w" | "x" | "y" | "z";
+         "Y" | "Z" | "a" | "b" | "c" | "d" | "e" | "f" | "g" | "h" | "i" | "j" |
+         "k" | "l" | "m" | "n" | "o" | "p" | "q" | "r" | "s" | "t" | "u" | "v" |
+         "w" | "x" | "y" | "z";
 symbol = "[" | "]" | "{" | "}" | "(" | ")" | "<" | ">" | "'" | "=" | "|" | "." |
          "," | ";" | "_" | "%" | "$" | "@" | "!" | "?" | "^" | "&" | ":" | "/" |
-	 "#" | '\"' | '|' | '*' | '+' | '\';
+         "#" | '\"' | '|' | '*' | '+' | '\';
 digit = "0" | "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9";
 number = digit, { digit };
 
@@ -44,8 +44,8 @@ loop-conn-statement =  '"conn"',       ws, ":", ws, connection;
 
 plain-submodule = "{", ws, name-statement, ws,
                   ",", ws, module-statement, ws,
-                  [(",", ws, size-statement, ws)],
-                  [(",", ws, params-statement, ws)],
+                  [ ",", ws, size-statement, ws ],
+                  [ ",", ws, params-statement, ws ],
                   "}";
 
 product-name = '"cartesian"' | '"tensor"' | '"lexicographical"' |
@@ -57,12 +57,12 @@ product-submodule = "{", ws, product-name, ws, ":", ws, "[", ws,
 root-product-name = '"root"' | '"rooted"';
 
 root-product-submodule = "{", ws, root-product-name, ws, ":", ws, "[", ws,
-                    submodule, ws, ",", ws, submodule, ws, "]", ws, ",", ws,
-		    root-statement, ws, "}";
+                         submodule, ws, ",", ws, submodule, ws, "]", ws,
+                         ",", ws, root-statement, ws, "}";
 
 cond-submodule = "{", ws, if-statement, ws,
-		 ",", ws, then-subm-statement, ws,
-                 [(",", ws, else-subm-statement, ws)],
+                 ",", ws, then-subm-statement, ws,
+                 [ ",", ws, else-subm-statement, ws ],
                  "}";
 
 submodule = plain-submodule | product-submodule | root-product-submodule |
@@ -77,12 +77,12 @@ replace-statement = "[", ws, { (replace, ws, ",", ws) }, "]";
 
 plain-connection = "{", ws, from-statement, ws,
                    ",", ws, to-statement, ws,
-                   [(",", ws, attributes-statement, ws)],
+                   [ ",", ws, attributes-statement, ws ],
                    "}";
 
 cond-connection = "{", ws, if-statement, ws,
                   ",", ws, then-conn-statement, ws,
-                  [(",", ws, else-conn-statement, ws)],
+                  [ ",", ws, else-conn-statement, ws ],
                   "}";
 
 loop-connection = "{", ws, loop-statement, ws,
@@ -95,18 +95,18 @@ ring-connection = "{", ws, ring-statement, ws,
                    ",", ws, start-statement, ws,
                    ",", ws, end-statement, ws,
                    ",", ws, conn-statement, ws,
-                   [(",", ws, attributes-statement, ws)],
+                   [ ",", ws, attributes-statement, ws ],
                    "}";
 
 line-connection = "{", ws, line-statement, ws,
                    ",", ws, start-statement, ws,
                    ",", ws, end-statement, ws,
                    ",", ws, conn-statement, ws,
-                   [(",", ws, attributes-statement, ws)],
+                   [ ",", ws, attributes-statement, ws ],
                    "}";
 
 all-connection = "{", ws, all-statement, ws,
-                 [(",", ws, attributes-statement, ws)],
+                 [ ",", ws, attributes-statement, ws ],
                  "}";
 
 connection = plain-connection | loop-connection | all-connection |
@@ -116,21 +116,23 @@ connections-statement = "[", ws, { (connection, ws, ",", ws) }, "]";
 
 simple-module = "{", ws, '"simplemodule"', ws, ":", ws, "{",
                 ws, name-statement, ws,
-                [(",", ws, attributes-statement, ws)],
-                [(",", ws, gates-statement, ws)],
+                [ ",", ws, attributes-statement, ws ],
+                [ ",", ws, gates-statement, ws ],
                 "}", ws, "}";
 
 compound-module = "{", ws, '"module"', ws, ":", ws, "{",
                   ws, name-statement, ws,
-                  [(",", ws, params-statement, ws)],
-                  [(",", ws, gates-statement, ws)],
-                  [(",", ws, submodules-statement, ws)],
-                  [(",", ws, connections-statement, ws)],
-                  [(",", ws, replace-statement, ws)],
+                  [ ",", ws, params-statement, ws ],
+                  [ ",", ws, gates-statement, ws ],
+                  [ ",", ws, submodules-statement, ws ],
+                  [ ",", ws, connections-statement, ws ],
+                  [ ",", ws, replace-statement, ws ],
                   "}"; 
 
 network = "{", ws, '"network"', ws, ":", ws, "{",
           ws, module-statement, ws,
-          [(",", ws, params-statement, ws)],
+          [ ",", ws, params-statement, ws ],
           "}", ws, "}";
 
+description = "{", ws, simple-module, ws, { simple-module }, ws,
+              { compound-module }, ws, network, ws, "}";

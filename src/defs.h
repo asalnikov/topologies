@@ -72,6 +72,7 @@ typedef enum {
 	CONN_HAS_CONN,
 	CONN_HAS_LOOP,
 	CONN_HAS_COND,
+	CONN_HAS_ALLLIST,
 	CONN_HAS_ALL,
 	CONN_HAS_LINE,
 	CONN_HAS_RING
@@ -112,6 +113,14 @@ typedef struct {
 } connection_line_t;
 
 typedef struct {
+	char *var;
+	char *start;
+	char *end;
+	char *nodes;
+	char *attributes;
+} connection_alllist_t;
+
+typedef struct {
 	char *from;
 	char *to;
 	char *attributes;
@@ -124,6 +133,7 @@ struct connection_wrapper {
 		connection_loop_t *loop;
 		connection_cond_t *cond;
 		connection_all_t *all;
+		connection_alllist_t *alllist;
 		connection_line_t *line;
 		connection_ring_t *ring;
 	} ptr;

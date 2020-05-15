@@ -12,10 +12,12 @@
 	}],
 	"connections": [
 	{
-		"all-match": "node"
+		"all": "i",
+		"start": "0",
+		"end": "5",
+		"conn": "node[i]"
 	}]
 }},
-
 
 { "network": {
 	"module": "alltoall"
